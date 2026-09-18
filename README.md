@@ -5,6 +5,9 @@ Usuario de Github https://github.com/erick2599 **
 ** Justin Brian Sanchez Cardona  25-4195-2024
 Usuario de Github https://github.com/JustinSanchez2541 **
 
+** Wilson Stephen Martínez Alfaro 25-2887-2024
+Usuario de Github https://github.com/Stephenz16 **
+
 ** Jose Ernesto Crespin Sayes  25-0599-2024
 Usuario de Github https://github.com/josecrespin071-stack **
 
