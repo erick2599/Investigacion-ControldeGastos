@@ -4,3 +4,6 @@ Usuario de Github https://github.com/erick2599 **
 
 ** Justin Brian Sanchez Cardona  25-4195-2024
 Usuario de Github https://github.com/JustinSanchez2541 **
+
+** David Reynaldo Trejo Jimenez  25-1265-2023
+Usuario de Github https://github.com/2512652023-cpu **
