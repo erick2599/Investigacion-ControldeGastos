@@ -48,6 +48,17 @@ Objetivos específicos
 3.	Medir el tiempo de respuesta de las operaciones evaluadas mediante múltiples ejecuciones para cada escenario experimental.
 4.	Analizar las diferencias de rendimiento obtenidas entre Firebase y SQLite.
 5.	Proponer recomendaciones para la selección de un gestor de bases de datos según las condiciones evaluadas y los resultados obtenidos.
+
+
+Justificación
+Técnica
+Se examinará la implementación de una aplicación móvil nativa para Android desarrollada en Java, utilizando SQLite como gestor de base de datos embebido para la persistencia local, garantizando el almacenamiento seguro de transacciones financieras, el control presupuestario y la generación de indicadores de desempeño en tiempo real. Esta solución tecnológica se respaldará bajo los criterios de calidad del modelo ISO/IEC 25010 en cuanto a rendimiento, consumo eficiente de recursos en el dispositivo y usabilidad móvil. 
+Académica
+El desarrollo de la investigación permitirá consolidar los conocimientos teóricos y prácticos de la asignatura Programación III, aplicando los fundamentos del lenguaje Java en entornos móviles, la interacción con bases de datos relacionales y la ejecución de pruebas de desempeño bajo condiciones controladas. Asimismo, vinculará la teoría orientada a objetos con la resolución de un problema práctico mediante estándares de ingeniería de software.
+Social o de contexto
+Se abordará la problemática del manejo ineficiente de los recursos financieros cotidianos en los usuarios, proporcionando una herramienta móvil accesible y de uso inmediato que facilite el registro continuo de gastos, minimice errores humanos y optimice la toma de decisiones económicas personales o presupuestarias. De este modo, la aplicación aportará una solución práctica al alcance de la mano para responder a necesidades reales del entorno
+
+
 3.7 Cronograma
 
 Diagrama de Gantt
