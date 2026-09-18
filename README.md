@@ -10,3 +10,6 @@ Usuario de Github https://github.com/josecrespin071-stack **
 
 ** David Reynaldo Trejo Jimenez  25-1265-2023
 Usuario de Github https://github.com/2512652023-cpu **
+
+** Wilson Stephen Martínez Alfaro 25-2887-2024
+Usuario de Github https://github.com/Stephenz16 **
