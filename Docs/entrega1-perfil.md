@@ -94,3 +94,13 @@ gantt
 
 &#x20;   Entrega Final                          :milestone, m1, 2026-09-17, 0d
 
+
+3.8 Viabilidad técnica
+Viabilidad Tecnica
+El proyecto se desarrollará con Android Studio para la aplicación movil, usuando SQLite para el almacenamiento local y, opcionalmente, Firebase(plan gratuito) para sincronizacion en la nube. Estas herramientas se distribuyen bajo licencias permisivas de codigo abierto(Apache2.0/MIT), adeacuadas para proyectos academicos porque permiten su uso, modificacion y reutilizacion sin restricciones legales significativas.
+
+En cuanto al hadware, se va a requerir una computadora de desarrollo con al menos 8-16 de RAM, procesador intel core i5, ademas de un telefono android (o el emulador de android studio) para las pruebas.
+
+Los datos provendran de dos fuentes: registros ingresados manualmente por un pequeño grupo de usuario o los mismos integrantes del grupo y los datos sinteticos generados por script para probar el sistema con mayor volumen. Al tratarse de datos finacieros personales, debe respetarse la ley de proteccion de datos personales de El Salvaddor, solicitando consentimento informacion y anonimiznado la informacion usuada.
+
+El riesgo mas alto es la baja disponibilidad de usuarios  y las restricciones legales al recolectar datos finacieros reales como plan alterno, se generaran datos sinteticos que permitan continuar con las pruebas y la validacion del sistema sin depender de usuarios reales.
