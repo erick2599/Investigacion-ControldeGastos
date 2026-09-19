@@ -1,3 +1,6 @@
+ANÁLISIS DEL TIEMPO DE RESPUESTA ENTRE ALMACENAMIENTO LOCAL CON ROOM Y SINCRONIZACIÓN EN LA NUBE PARA APLICACIONES ANDROID DE GASTOS
+                                 
+                                 
                                  GESTOR DE GASTOS
 
 
