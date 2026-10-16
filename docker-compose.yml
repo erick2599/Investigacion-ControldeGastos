@@ -1,0 +1,11 @@
+services:
+  build:
+    build: .
+    image: controldegastos-build:0.2
+    volumes:
+      # caché de Gradle persistente entre ejecuciones
+      - gradle-cache:/root/.gradle
+      # reportes de pruebas visibles en la máquina anfitriona
+      - ./app/build:/workspace/app/build
+volumes:
+  gradle-cache:

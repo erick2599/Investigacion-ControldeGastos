@@ -6,16 +6,16 @@ import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.controldegastos.R
 import com.example.controldegastos.model.Gasto
 import com.example.controldegastos.viewModel.GastosViewModel
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import java.util.UUID
-import kotlinx.coroutines.flow.StateFlow
 
 
 class MainActivity : AppCompatActivity() {
@@ -74,22 +74,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun actualizarPantallaFinanciera() {
-        // Usamos el ciclo de vida seguro para lanzar la corrutina
-        androidx.lifecycle.lifecycleScope.launchWhenStarted {
-            // Accedemos de forma directa al estado de la lista de gastos
-            val presupuesto = viewModel.presupuestoInicial.value
-            val totalGastado = viewModel.obtenerTotalGastado()
-            val disponible = viewModel.obtenerDineroDisponible()
-
-            // Formateamos los textos de manera limpia y sin errores de localización
-            txtPresupuesto.text = String.format(java.util.Locale.US, "$%.2f", presupuesto)
-            txtTotalGastado.text = String.format(java.util.Locale.US, "$%.2f", totalGastado)
-            txtDineroDisponible.text = String.format(java.util.Locale.US, "$%.2f", disponible)
+        // Recolecta la lista de gastos mientras la pantalla está visible (STARTED)
+        // y refresca las tarjetas cada vez que cambia.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.listaGastos.collect { mostrarResumen() }
+            }
         }
     }
 
+    private fun mostrarResumen() {
+        val presupuesto = viewModel.presupuestoInicial.value
+        val totalGastado = viewModel.obtenerTotalGastado()
+        val disponible = viewModel.obtenerDineroDisponible()
 
+        // Locale.US evita diferencias de formato según el idioma del dispositivo
+        txtPresupuesto.text = String.format(java.util.Locale.US, "$%.2f", presupuesto)
+        txtTotalGastado.text = String.format(java.util.Locale.US, "$%.2f", totalGastado)
+        txtDineroDisponible.text = String.format(java.util.Locale.US, "$%.2f", disponible)
+    }
 }
-
-
-

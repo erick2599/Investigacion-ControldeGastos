@@ -1,0 +1,23 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Instala Android SDK y acepta licencias
+      - uses: android-actions/setup-android@v3
+
+      # Gradle 8.5 (misma versión que gradle-wrapper.properties y el Dockerfile)
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: Compilar y ejecutar pruebas unitarias
+        run: gradle --no-daemon --stacktrace assembleDebug testDebugUnitTest

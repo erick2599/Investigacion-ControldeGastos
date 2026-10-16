@@ -2,10 +2,8 @@ package com.example.controldegastos.viewModel
 
 import androidx.lifecycle.ViewModel
 import com.example.controldegastos.model.Gasto
-import kotlinx.flow.MutableStateFlow
-import kotlinx.flow.StateFlow
-
-
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class GastosViewModel : ViewModel() {
 
