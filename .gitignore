@@ -1,0 +1,13 @@
+.gradle/
+build/
+capture/
+.idea/
+*.iml
+local.properties
+.DS_Store
+build-tools/*
+platforms/*
+licenses/*
+.knownPackages
+emulator/*
+platform-tools/*
