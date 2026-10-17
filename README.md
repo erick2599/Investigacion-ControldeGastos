@@ -14,6 +14,8 @@ Usuario de Github https://github.com/josecrespin071-stack **
 ** David Reynaldo Trejo Jimenez  25-1265-2023
 Usuario de Github https://github.com/2512652023-cpu **
 
+** Diego Anthony Ramos Alemán 25-3224-2021
+Usuario de Github https://github.com/Gowi55 **
 
 
 OBJETIVOS
