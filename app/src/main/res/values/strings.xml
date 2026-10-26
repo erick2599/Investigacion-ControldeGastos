@@ -1,3 +1,47 @@
 <resources>
     <string name="app_name">ControlDeGastos</string>
+
+    <!-- Login -->
+    <string name="login_titulo">Control de Gastos Laborales</string>
+    <string name="correo_electronico">Correo Electrónico</string>
+    <string name="contrasena">Contraseña</string>
+    <string name="iniciar_sesion">Iniciar Sesión</string>
+    <string name="crear_cuenta">Crear Cuenta Nueva</string>
+    <string name="error_correo">Ingresa un correo válido</string>
+    <string name="error_contrasena">La contraseña debe tener al menos 4 caracteres</string>
+    <string name="campos_requeridos">Por favor, completa todos los campos</string>
+    <string name="bienvenido">¡Bienvenido de nuevo!</string>
+    <string name="cuenta_creada">Cuenta creada con éxito: %1$s</string>
+
+    <!-- Pantalla principal -->
+    <string name="dinero_disponible">Dinero Disponible</string>
+    <string name="presupuesto">Presupuesto</string>
+    <string name="total_gastado">Total Gastado</string>
+    <string name="actividades_gastos">Actividades y Gastos</string>
+    <string name="agregar_gasto">Agregar nuevo gasto</string>
+    <string name="sin_gastos">Aún no hay gastos registrados.\nToca el botón + para agregar el primero.</string>
+
+    <!-- Diálogo de gasto -->
+    <string name="nuevo_gasto">Nuevo gasto</string>
+    <string name="titulo_gasto">Título</string>
+    <string name="monto">Monto</string>
+    <string name="categoria">Categoría</string>
+    <string name="adjuntar_recibo">Adjuntar foto del recibo</string>
+    <string name="sin_recibo">Sin recibo adjunto</string>
+    <string name="recibo_adjunto">Recibo adjunto ✓</string>
+    <string name="recibo_importado">Foto del recibo adjuntada</string>
+    <string name="guardar">Guardar</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="gasto_guardado">Gasto guardado</string>
+    <string name="error_titulo">Escribe un título para el gasto</string>
+    <string name="error_monto">Ingresa un monto mayor que cero</string>
+    <string name="error_categoria">Selecciona una categoría</string>
+
+    <!-- Eliminar -->
+    <string name="eliminar">Eliminar</string>
+    <string name="eliminar_gasto">Eliminar gasto</string>
+    <string name="eliminar_gasto_mensaje">¿Deseas eliminar "%1$s"?</string>
+    <string name="gasto_eliminado">Gasto eliminado</string>
+
+    <string name="recibo">Recibo</string>
 </resources>

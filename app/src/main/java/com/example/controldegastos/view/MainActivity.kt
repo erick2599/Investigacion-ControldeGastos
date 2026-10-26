@@ -1,51 +1,48 @@
 package com.example.controldegastos.view
 
+import android.net.Uri
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.controldegastos.R
+import com.example.controldegastos.databinding.ActivityMainBinding
+import com.example.controldegastos.databinding.DialogAgregarGastoBinding
 import com.example.controldegastos.model.Gasto
 import com.example.controldegastos.viewModel.GastosViewModel
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.flow.StateFlow
-
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: GastosViewModel
-    private lateinit var txtDineroDisponible: TextView
-    private lateinit var txtPresupuesto: TextView
-    private lateinit var txtTotalGastado: TextView
-    private lateinit var fabAgregarGasto: FloatingActionButton
+    private lateinit var adapter: GastosAdapter
 
-    // Registrar el selector de fotos de la galería del sistema
+    private var reciboUri: Uri? = null
+    private var txtReciboDialogo: TextView? = null
+
+    // Selector de fotos de la galería del sistema
     private val seleccionarFotoGaleria = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            // El usuario seleccionó la foto de su recibo con éxito
-            Toast.makeText(this, "Recibo importado con éxito", Toast.LENGTH_LONG).show()
-
-            // Creamos un gasto de prueba simulando los datos extraídos del recibo
-            val nuevoGasto = Gasto(
-                id = UUID.randomUUID().toString(),
-                titulo = "Recibo Importado (Trabajo)",
-                monto = 75.50, // Monto de prueba simulado
-                categoriaLaboral = "Operaciones",
-                fecha = "15/10/2026",
-                rutaFotoRecibo = uri.toString()
-            )
-
-            // Lo agregamos al ViewModel para actualizar las tarjetas financieras
-            viewModel.agregarGasto(nuevoGasto)
+            reciboUri = uri
+            txtReciboDialogo?.text = getString(R.string.recibo_adjunto)
+            Toast.makeText(this, R.string.recibo_importado, Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(this, "No se seleccionó ninguna imagen", Toast.LENGTH_SHORT).show()
         }
@@ -53,43 +50,126 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[GastosViewModel::class.java]
 
-        txtDineroDisponible = findViewById(R.id.txtDineroDisponible)
-        txtPresupuesto = findViewById(R.id.txtPresupuesto)
-        txtTotalGastado = findViewById(R.id.txtTotalGastado)
-        fabAgregarGasto = findViewById(R.id.fabAgregarGasto)
+        adapter = GastosAdapter { gasto -> confirmarEliminar(gasto) }
+        binding.rvGastos.layoutManager = LinearLayoutManager(this)
+        binding.rvGastos.adapter = adapter
 
-        // Escuchar las actualizaciones de los flujos de datos financieros
-        actualizarPantallaFinanciera()
+        binding.fabAgregarGasto.setOnClickListener { mostrarDialogoAgregarGasto() }
 
-        // Al presionar el botón (+), abrimos la galería para elegir la foto del recibo
-        fabAgregarGasto.setOnClickListener {
+        observarEstado()
+    }
+
+    private fun observarEstado() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { estado ->
+                    binding.txtPresupuesto.text = formatearMoneda(estado.presupuesto)
+                    binding.txtTotalGastado.text = formatearMoneda(estado.totalGastado)
+                    binding.txtDineroDisponible.text = formatearMoneda(estado.disponible)
+
+                    binding.txtVacio.isVisible = estado.gastos.isEmpty()
+                    binding.rvGastos.isVisible = estado.gastos.isNotEmpty()
+
+                    adapter.submitList(estado.gastos)
+                }
+            }
+        }
+    }
+
+    private fun mostrarDialogoAgregarGasto() {
+        val dialogBinding = DialogAgregarGastoBinding.inflate(layoutInflater)
+        reciboUri = null
+        txtReciboDialogo = dialogBinding.txtReciboSeleccionado
+        dialogBinding.txtReciboSeleccionado.text = getString(R.string.sin_recibo)
+
+        val categorias = listOf("Transporte", "Materiales", "Viáticos", "Operaciones", "Otros")
+        dialogBinding.spCategoria.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, categorias)
+        )
+        dialogBinding.spCategoria.setOnClickListener { dialogBinding.spCategoria.showDropDown() }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.nuevo_gasto)
+            .setView(dialogBinding.root)
+            .create()
+
+        dialog.setOnDismissListener {
+            txtReciboDialogo = null
+            reciboUri = null
+        }
+
+        dialogBinding.btnCancelar.setOnClickListener { dialog.dismiss() }
+
+        dialogBinding.btnAdjuntarRecibo.setOnClickListener {
             seleccionarFotoGaleria.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             )
         }
-    }
 
-    private fun actualizarPantallaFinanciera() {
-        // Usamos el ciclo de vida seguro para lanzar la corrutina
-        androidx.lifecycle.lifecycleScope.launchWhenStarted {
-            // Accedemos de forma directa al estado de la lista de gastos
-            val presupuesto = viewModel.presupuestoInicial.value
-            val totalGastado = viewModel.obtenerTotalGastado()
-            val disponible = viewModel.obtenerDineroDisponible()
+        dialogBinding.btnGuardar.setOnClickListener {
+            val titulo = dialogBinding.etTitulo.text?.toString()?.trim().orEmpty()
+            val montoTexto = dialogBinding.etMonto.text?.toString()
+                ?.trim()
+                ?.replace(",", ".")
+                .orEmpty()
+            val monto = montoTexto.toDoubleOrNull()
+            val categoria = dialogBinding.spCategoria.text?.toString()?.trim().orEmpty()
 
-            // Formateamos los textos de manera limpia y sin errores de localización
-            txtPresupuesto.text = String.format(java.util.Locale.US, "$%.2f", presupuesto)
-            txtTotalGastado.text = String.format(java.util.Locale.US, "$%.2f", totalGastado)
-            txtDineroDisponible.text = String.format(java.util.Locale.US, "$%.2f", disponible)
+            dialogBinding.tilTitulo.error = null
+            dialogBinding.tilMonto.error = null
+            dialogBinding.tilCategoria.error = null
+
+            when {
+                titulo.isEmpty() -> {
+                    dialogBinding.tilTitulo.error = getString(R.string.error_titulo)
+                }
+
+                monto == null || monto <= 0 -> {
+                    dialogBinding.tilMonto.error = getString(R.string.error_monto)
+                }
+
+                categoria.isEmpty() -> {
+                    dialogBinding.tilCategoria.error = getString(R.string.error_categoria)
+                }
+
+                else -> {
+                    viewModel.agregarGasto(
+                        Gasto(
+                            id = UUID.randomUUID().toString(),
+                            titulo = titulo,
+                            monto = monto,
+                            categoriaLaboral = categoria,
+                            fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                                .format(Date()),
+                            rutaFotoRecibo = reciboUri?.toString()
+                        )
+                    )
+                    Toast.makeText(this, R.string.gasto_guardado, Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
+            }
         }
+
+        dialog.show()
     }
 
+    private fun confirmarEliminar(gasto: Gasto) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.eliminar_gasto)
+            .setMessage(getString(R.string.eliminar_gasto_mensaje, gasto.titulo))
+            .setPositiveButton(R.string.eliminar) { _, _ ->
+                viewModel.eliminarGasto(gasto.id)
+                Toast.makeText(this, R.string.gasto_eliminado, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.cancelar, null)
+            .show()
+    }
 
+    private fun formatearMoneda(valor: Double): String =
+        String.format(Locale.US, "\$%,.2f", valor)
 }
-
-
-
