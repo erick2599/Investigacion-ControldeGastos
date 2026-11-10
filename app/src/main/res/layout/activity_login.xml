@@ -80,5 +80,21 @@
             android:text="@string/crear_cuenta"
             android:textColor="@color/verde_primario"
             android:textSize="14sp" />
+
+        <Button
+                android:id="@+id/btnGoogleLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Iniciar sesión con Google" />
+
+        <TextView
+                android:id="@+id/tvOlvideContrasena"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="¿Olvidaste tu contraseña?"
+                android:textColor="@color/design_default_color_primary"
+                android:padding="8dp"/>
+
+
     </LinearLayout>
 </ScrollView>

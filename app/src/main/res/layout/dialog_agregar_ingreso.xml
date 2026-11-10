@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:app="http://android.com"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:theme="@style/Theme.Material3.Light"
+                android:background="@color/white">
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Registrar Nuevo Ingreso"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"
+                android:textColor="@android:color/black"/>
+
+        <!-- Campo Concepto -->
+        <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Concepto (Ej. Pago Quincena)">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etConceptoIngreso"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapWords"
+                    android:textColor="@android:color/black" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Campo Monto (ESTILO CORREGIDO CON PREFIJO DE MONEDA) -->
+        <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Monto Recibido"
+                app:prefixText="$"
+                app:prefixTextColor="@android:color/black">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etMontoIngreso"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:textColor="@android:color/black" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Campo Categoría -->
+        <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Categoría de Ingreso">
+            <AutoCompleteTextView
+                    android:id="@+id/spCategoriaIngreso"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:textColor="@android:color/black" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Botones de Acción -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+            <Button
+                    android:id="@+id/btnCancelarIngreso"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cancelar" />
+
+            <Button
+                    android:id="@+id/btnGuardarIngreso"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Agregar"
+                    app:backgroundTint="@color/verde_primario" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

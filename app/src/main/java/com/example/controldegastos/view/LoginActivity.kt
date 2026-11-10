@@ -2,82 +2,127 @@ package com.example.controldegastos.view
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView // IMPORT CORREGIDO
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.controldegastos.databinding.ActivityLoginBinding
+import com.example.controldegastos.R
+import com.google.android.material.textfield.TextInputEditText
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 
 class LoginActivity : AppCompatActivity() {
 
-    // Instancia de View Binding (se inicializa de forma tardía)
-    private lateinit var binding: ActivityLoginBinding
+    private lateinit var etEmail: TextInputEditText
+    private lateinit var etPassword: TextInputEditText
+    private lateinit var btnLogin: Button
+    private lateinit var btnRegister: Button
+    private lateinit var btnGoogleLogin: Button
+    private lateinit var tvOlvideContrasena: TextView // DECLARACIÓN DE VARIABLE CORREGIDA
 
-    // Instancia de Firebase Authentication
-    private lateinit var mAuth: FirebaseAuth
+    private val auth = FirebaseAuth.getInstance()
+    private lateinit var googleSignInClient: GoogleSignInClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_login)
 
-        // 1. Configurar View Binding para inflar la vista
-        binding = ActivityLoginBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        etEmail = findViewById(R.id.etEmail)
+        etPassword = findViewById(R.id.etPassword)
+        btnLogin = findViewById(R.id.btnLogin)
+        btnRegister = findViewById(R.id.btnRegister)
+        btnGoogleLogin = findViewById(R.id.btnGoogleLogin)
+        tvOlvideContrasena = findViewById(R.id.tvOlvideContrasena) // ASIGNACIÓN CORRECTA DENTRO DE ONCREATE
 
-        // 2. Inicializar Firebase Auth
-        mAuth = FirebaseAuth.getInstance()
+        // Configuración de Google Sign-In (Asegúrate de cambiar este String por tu código real .apps.googleusercontent.com)
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("project-74174685981://googleusercontent.com")
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        // 3. Comportamiento del botón "Iniciar Sesión"
-        binding.btnLogin.setOnClickListener {
-            val email = binding.etEmail.text.toString().trim()
-            val password = binding.etPassword.text.toString().trim()
+        // Login Tradicional con Firebase
+        btnLogin.setOnClickListener {
+            val email = etEmail.text.toString().trim()
+            val password = etPassword.text.toString().trim()
 
             if (email.isNotEmpty() && password.isNotEmpty()) {
-                loginUsuario(email, password)
+                auth.signInWithEmailAndPassword(email, password)
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "¡Bienvenido de nuevo!", Toast.LENGTH_SHORT).show()
+                        irAMainActivity()
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, "Credenciales incorrectas: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
             } else {
-                Toast.makeText(this, "Por favor, ingresa correo y contraseña", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Por favor, completa todos los campos", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // 4. Comportamiento del botón "Crear Cuenta Nueva"
-        binding.btnRegister.setOnClickListener {
-            val email = binding.etEmail.text.toString().trim()
-            val password = binding.etPassword.text.toString().trim()
+        // Login con Google
+        btnGoogleLogin.setOnClickListener {
+            val signInIntent = googleSignInClient.signInIntent
+            launcherGoogle.launch(signInIntent)
+        }
 
-            if (email.isNotEmpty() && password.isNotEmpty()) {
-                registrarUsuario(email, password)
+        btnRegister.setOnClickListener {
+            val intent = Intent(this, Register::class.java)
+            startActivity(intent)
+        }
+
+        // BLOQUE CORREGIDO: Ahora está seguro dentro de onCreate
+        tvOlvideContrasena.setOnClickListener {
+            val email = etEmail.text.toString().trim()
+
+            if (email.isNotEmpty()) {
+                auth.sendPasswordResetEmail(email)
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "Se ha enviado un correo para restablecer tu contraseña.", Toast.LENGTH_LONG).show()
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, "Error al enviar el correo: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
             } else {
-                Toast.makeText(this, "Llena los campos para crear tu cuenta", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Por favor, ingresa tu correo electrónico primero en el campo de texto", Toast.LENGTH_SHORT).show()
+            }
+        }
+    } // AQUÍ CIERRA CORRECTAMENTE ONCREATE
+
+    // Receptor del resultado de la pantalla de Google
+    private val launcherGoogle = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val cuenta = task.getResult(ApiException::class.java)
+                cuenta?.idToken?.let { token ->
+                    val credencial = GoogleAuthProvider.getCredential(token, null)
+                    auth.signInWithCredential(credencial)
+                        .addOnSuccessListener {
+                            Toast.makeText(this, "Inicio de sesión con Google exitoso", Toast.LENGTH_SHORT).show()
+                            irAMainActivity()
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(this, "Error Firebase: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                }
+            } catch (e: ApiException) {
+                Toast.makeText(this, "Error Google: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    // Método para validar credenciales en Firebase e iniciar sesión
-    private fun loginUsuario(email: String, password: String) {
-        mAuth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    Toast.makeText(this, "¡Inicio de sesión exitoso!", Toast.LENGTH_SHORT).show()
-
-                    // Navegamos hacia la pantalla principal
-                    val intent = Intent(this, MainActivity::class.java)
-                    startActivity(intent)
-                    finish() // Cierra el Login de la pila de pantallas
-                } else {
-                    val error = task.exception?.message ?: "Error desconocido"
-                    Toast.makeText(this, "Error: $error", Toast.LENGTH_LONG).show();
-                }
-            }
+    private fun irAMainActivity() {
+        val intent = Intent(this, MainActivity::class.java)
+        // Estas banderas aseguran que MainActivity se abra de forma limpia como pantalla principal
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
-    // Método para dar de alta un nuevo correo en Firebase Authentication
-    private fun registrarUsuario(email: String, password: String) {
-        mAuth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    Toast.makeText(this, "¡Usuario creado con éxito! Ya puedes iniciar sesión.", Toast.LENGTH_LONG).show()
-                } else {
-                    val error = task.exception?.message ?: "Error desconocido"
-                    Toast.makeText(this, "Error al registrar: $error", Toast.LENGTH_LONG).show()
-                }
-            }
-    }
 }
