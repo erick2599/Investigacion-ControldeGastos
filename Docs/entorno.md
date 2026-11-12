@@ -46,6 +46,24 @@ En Windows:
 .\gradlew.bat assembleDebug
 ```
 
+### Firma del release
+
+`app/build.gradle.kts` lee `keystore.properties` de la raíz del proyecto (está
+ignorado por Git). Si el archivo existe, `assembleRelease` firma el APK; si no
+(por ejemplo en CI), el release se genera sin firmar como antes.
+
+```properties
+storeFile=controldegastos-release.jks
+storePassword=...
+keyAlias=controldegastos
+keyPassword=...
+```
+
+El APK firmado queda en `app/build/outputs/apk/release/app-release.apk`.
+Guarda una copia de `controldegastos-release.jks` y de `keystore.properties`
+fuera del repositorio: sin esa keystore no se pueden publicar actualizaciones
+con la misma identidad.
+
 ## 3. Pruebas instrumentadas
 
 Las pruebas de `app/src/androidTest` requieren un emulador o un dispositivo

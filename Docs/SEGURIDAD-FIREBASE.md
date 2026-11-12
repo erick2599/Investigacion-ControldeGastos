@@ -90,10 +90,14 @@ proyecto ya está configurado:
 - Web client ID en `app/src/main/res/values/strings.xml`.
 - SHA-1 de depuración:
   `3E:77:FA:6A:92:25:17:54:1D:ED:AC:94:1E:7C:34:BD:E2:E3:D2:92`.
+- SHA-1 del release:
+  `58:14:86:1B:2D:11:80:0C:AF:41:DB:97:FD:74:26:E4:D7:87:BF:0D`.
 - El proveedor Google está habilitado (verificado contra Identity Toolkit).
 
-Falta probar el flujo en un dispositivo y, si se firma el release, registrar
-también su SHA-1. Para replicar la configuración en otro entorno:
+El SHA-1 del release debe estar registrado en la app Android de Firebase
+(*Configuración del proyecto* → *Tus apps*), igual que el de depuración. Si no
+lo está, el inicio de sesión con Google falla solo en el APK release. Para
+replicar la configuración en otro entorno:
 
 1. En Google Cloud Console → *APIs y servicios* → *Credenciales*, crea un
    **ID de cliente de OAuth 2.0** de tipo *Aplicación web*.
