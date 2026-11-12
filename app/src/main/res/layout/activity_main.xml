@@ -5,7 +5,6 @@
                                                    android:id="@+id/main"
                                                    android:layout_width="match_parent"
                                                    android:layout_height="match_parent"
-                                                   android:background="@color/fondo"
                                                    tools:context=".view.MainActivity">
 
     <!-- 1. TEXTVIEW DE BIENVENIDA -->
@@ -15,27 +14,30 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
-            android:layout_marginEnd="16dp"
-            android:text="¡Bienvenido!"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/bienvenida"
+            android:textColor="@color/texto_principal"
             android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnCerrarSesion"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btnCerrarSesion" />
+            app:layout_constraintTop_toTopOf="parent" />
 
     <!-- 2. BOTÓN DE CERRAR SESIÓN -->
     <Button
             android:id="@+id/btnCerrarSesion"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="16dp"
-            android:text="Salir"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="@string/salir"
+            android:textColor="@color/rojo_gasto"
             android:textSize="12sp"
-            android:backgroundTint="#D32F2F"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Tarjeta Principal del Balance -->
     <com.google.android.material.card.MaterialCardView
@@ -70,7 +72,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="$1,200.00"
                     android:textColor="@color/verde_primario"
                     android:textSize="32sp"
                     android:textStyle="bold" />
@@ -84,6 +85,7 @@
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:baselineAligned="false"
                     android:orientation="horizontal">
 
                 <LinearLayout
@@ -103,7 +105,6 @@
                             android:id="@+id/txtPresupuesto"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="$1,200.00"
                             android:textColor="@color/texto_principal"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -126,7 +127,6 @@
                             android:id="@+id/txtTotalGastado"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="$0.00"
                             android:textColor="@color/rojo_gasto"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -180,6 +180,19 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/lblHistorial"
             tools:listitem="@layout/item_gasto" />
+
+    <!-- Indicador de carga inicial -->
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/progressCargando"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/verde_primario"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/lblHistorial" />
 
     <!-- Botón Flotante para Añadir Gasto o Recibo -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton

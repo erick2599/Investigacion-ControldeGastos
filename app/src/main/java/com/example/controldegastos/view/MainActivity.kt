@@ -4,125 +4,88 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.controldegastos.R
+import com.example.controldegastos.databinding.ActivityMainBinding
+import com.example.controldegastos.databinding.DialogAgregarGastoBinding
+import com.example.controldegastos.databinding.DialogAgregarIngresoBinding
+import com.example.controldegastos.domain.Dinero
+import com.example.controldegastos.domain.ErrorValidacion
+import com.example.controldegastos.domain.Fechas
+import com.example.controldegastos.domain.Validador
 import com.example.controldegastos.model.Gasto
 import com.example.controldegastos.model.Ingreso
+import com.example.controldegastos.viewModel.GastosUiState
 import com.example.controldegastos.viewModel.GastosViewModel
-import com.google.android.material.card.MaterialCardView
+import com.example.controldegastos.viewModel.UiEvent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
-
-    private lateinit var txtBienvenida: TextView
-    private lateinit var viewModel: GastosViewModel
-    private lateinit var txtDineroDisponible: TextView
-    private lateinit var txtPresupuesto: TextView
-    private lateinit var txtTotalGastado: TextView
-    private lateinit var fabAgregarGasto: FloatingActionButton
-    private lateinit var btnCerrarSesion: Button
-    private lateinit var cardBalance: MaterialCardView
-
-    private lateinit var rvGastos: RecyclerView
+    private lateinit var binding: ActivityMainBinding
     private lateinit var gastosAdapter: GastosAdapter
+    private val auth = FirebaseAuth.getInstance()
+    private val viewModel: GastosViewModel by viewModels { GastosViewModel.Factory }
 
     private var uriReciboSeleccionado: Uri? = null
-    private var txtReciboReferenciaDialogo: TextView? = null
+    private var actualizarTextoRecibo: ((String) -> Unit)? = null
 
-
-    // Registrar el selector de fotos de la galería
     private val seleccionarFotoGaleria = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
             uriReciboSeleccionado = uri
-            txtReciboReferenciaDialogo?.text = "Recibo cargado correctamente"
-            Toast.makeText(this, "Foto del recibo seleccionada", Toast.LENGTH_SHORT).show()
+            actualizarTextoRecibo?.invoke(getString(R.string.recibo_cargado))
+            Toast.makeText(this, R.string.recibo_cargado, Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        // Inicialización de componentes visuales
-        txtBienvenida = findViewById(R.id.txtBienvenida)
-        txtDineroDisponible = findViewById(R.id.txtDineroDisponible)
-        txtPresupuesto = findViewById(R.id.txtPresupuesto)
-        txtTotalGastado = findViewById(R.id.txtTotalGastado)
-        fabAgregarGasto = findViewById(R.id.fabAgregarGasto)
-        btnCerrarSesion = findViewById(R.id.btnCerrarSesion)
-        cardBalance = findViewById(R.id.cardBalance)
-
-        // Configuración de la lista de gastos (RecyclerView)
-        rvGastos = findViewById(R.id.rvGastos)
-        rvGastos.layoutManager = LinearLayoutManager(this)
-
-        // Ajuste en el onCreate de tu MainActivity.kt
-        gastosAdapter = GastosAdapter { gastoAEliminar ->
-            // Cuando el usuario presione el icono de eliminar o haga clic largo, se borra de Firebase:
-            viewModel.eliminarGasto(gastoAEliminar.id)
-            Toast.makeText(this, "Gasto eliminado de la nube: ${gastoAEliminar.titulo}", Toast.LENGTH_SHORT).show()
-        }
-        rvGastos.adapter = gastosAdapter
-
-
-        // Carga de perfil del usuario logueado
-        val currentUser = auth.currentUser
-        val emailUsuario = currentUser?.email
-        if (emailUsuario != null) {
-            db.collection("usuarios").document(emailUsuario).get()
-                .addOnSuccessListener { document ->
-                    if (document != null && document.exists()) {
-                        val nombre = document.getString("nombre") ?: "Usuario"
-                        txtBienvenida.text = "¡Bienvenido, $nombre!"
-                    } else {
-                        val nombreGoogle = currentUser.displayName ?: "Usuario"
-                        txtBienvenida.text = "¡Bienvenido, $nombreGoogle!"
-                    }
-                }
+        if (auth.currentUser == null) {
+            irALogin()
+            return
         }
 
-        viewModel = ViewModelProvider(this)[GastosViewModel::class.java]
-        actualizarPantallaFinanciera()
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // Evento de clic en la tarjeta de saldo
-        cardBalance.setOnClickListener {
-            // Puedes usar esto para abrir un historial de ingresos si lo deseas
-        }
+        configurarLista()
+        configurarAcciones()
+        observarEstado()
+    }
 
-        // Configuración del botón flotante con menú selectivo
-        fabAgregarGasto.setOnClickListener {
-            val opciones = arrayOf("Registrar un Gasto (-)", "Registrar un Ingreso (+)")
+    private fun configurarLista() {
+        gastosAdapter = GastosAdapter(
+            onEliminar = ::confirmarEliminacion,
+            onReciboClick = ::abrirRecibo
+        )
+        binding.rvGastos.layoutManager = LinearLayoutManager(this)
+        binding.rvGastos.adapter = gastosAdapter
+    }
 
+    private fun configurarAcciones() {
+        binding.fabAgregarGasto.setOnClickListener {
+            val opciones = resources.getStringArray(R.array.opciones_registro)
             MaterialAlertDialogBuilder(this)
-                .setTitle("¿Qué deseas registrar?")
-                .setItems(opciones) { _, position ->
-                    when (position) {
+                .setTitle(R.string.menu_registrar_titulo)
+                .setItems(opciones) { _, posicion ->
+                    when (posicion) {
                         0 -> mostrarDialogoAgregarGasto()
                         1 -> mostrarDialogoAgregarIngreso()
                     }
@@ -130,159 +93,279 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
 
-        // Cierre seguro de sesión
-        btnCerrarSesion.setOnClickListener {
-            auth.signOut()
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
+        binding.btnCerrarSesion.setOnClickListener { confirmarCierreSesion() }
+    }
+
+    private fun observarEstado() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.uiState.collect { estado -> renderizar(estado) }
+                }
+                launch {
+                    viewModel.nombreUsuario.collect { nombre ->
+                        binding.txtBienvenida.text = getString(
+                            R.string.bienvenida_usuario,
+                            nombre ?: getString(R.string.nombre_usuario_predeterminado)
+                        )
+                    }
+                }
+                launch {
+                    viewModel.eventos.collect { evento -> mostrarEvento(evento) }
+                }
+            }
         }
+    }
+
+    private fun renderizar(estado: GastosUiState) {
+        binding.progressCargando.isVisible = estado.cargando
+        binding.txtVacio.isVisible = !estado.cargando && estado.gastos.isEmpty()
+        binding.fabAgregarGasto.isEnabled = !estado.guardando
+
+        binding.txtDineroDisponible.text = Dinero.formatear(estado.disponibleCentavos)
+        binding.txtDineroDisponible.setTextColor(
+            ContextCompat.getColor(
+                this,
+                if (estado.disponibleCentavos < 0) R.color.rojo_gasto else R.color.verde_primario
+            )
+        )
+        binding.txtPresupuesto.text = Dinero.formatear(estado.presupuestoCentavos)
+        binding.txtTotalGastado.text = Dinero.formatear(estado.totalGastadoCentavos)
+
+        gastosAdapter.submitList(estado.gastos)
+    }
+
+    private fun mostrarEvento(evento: UiEvent) {
+        val mensaje = when (evento) {
+            UiEvent.GastoGuardado -> R.string.gasto_guardado
+            UiEvent.IngresoGuardado -> R.string.ingreso_guardado
+            UiEvent.GastoEliminado -> R.string.gasto_eliminado
+            UiEvent.ErrorGuardarGasto -> R.string.error_guardar_gasto
+            UiEvent.ErrorGuardarIngreso -> R.string.error_guardar_ingreso
+            UiEvent.ErrorEliminarGasto -> R.string.error_eliminar_gasto
+            UiEvent.ErrorCargarDatos -> R.string.error_cargar_datos
+        }
+        Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun confirmarEliminacion(gasto: Gasto) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.eliminar_gasto)
+            .setMessage(getString(R.string.eliminar_gasto_mensaje, gasto.titulo))
+            .setNegativeButton(R.string.cancelar, null)
+            .setPositiveButton(R.string.eliminar) { _, _ -> viewModel.eliminarGasto(gasto) }
+            .show()
+    }
+
+    private fun confirmarCierreSesion() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.cerrar_sesion)
+            .setMessage(R.string.confirmar_cierre_sesion_mensaje)
+            .setNegativeButton(R.string.cancelar, null)
+            .setPositiveButton(R.string.cerrar_sesion) { _, _ ->
+                auth.signOut()
+                irALogin()
+            }
+            .show()
+    }
+
+    private fun irALogin() {
+        startActivity(
+            Intent(this, LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
+        finish()
     }
 
     private fun mostrarDialogoAgregarGasto() {
         uriReciboSeleccionado = null
+        val dialogo = DialogAgregarGastoBinding.inflate(layoutInflater)
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_agregar_gasto, null)
-
-        val etTitulo = dialogView.findViewById<TextInputEditText>(R.id.etTitulo)
-        val etMonto = dialogView.findViewById<TextInputEditText>(R.id.etMonto)
-        val spCategoria = dialogView.findViewById<AutoCompleteTextView>(R.id.spCategoria)
-        val btnAdjuntar = dialogView.findViewById<Button>(R.id.btnAdjuntarRecibo)
-        txtReciboReferenciaDialogo = dialogView.findViewById(R.id.txtReciboSeleccionado)
-        val btnCancelar = dialogView.findViewById<Button>(R.id.btnCancelar)
-        val btnGuardar = dialogView.findViewById<Button>(R.id.btnGuardar)
-
-        val categorias = arrayOf(
-            "Alimentación",
-            "Transporte",
-            "Vivienda y Hogar",
-            "Servicios Básicos",
-            "Salud y Farmacia",
-            "Entretenimiento",
-            "Educación",
-            "Compras y Ropa",
-            "Otros")
-        // Cambia esto tanto en mostrarDialogoAgregarGasto() como en mostrarDialogoAgregarIngreso()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, categorias)
-
-        spCategoria.setAdapter(adapter)
-
-        spCategoria.setOnClickListener { spCategoria.showDropDown() }
+        val categorias = resources.getStringArray(R.array.categorias_gasto)
+        dialogo.spCategoria.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, categorias)
+        )
 
         val alertDialog = MaterialAlertDialogBuilder(this)
-            .setView(dialogView)
+            .setTitle(R.string.titulo_dialogo_gasto)
+            .setView(dialogo.root)
             .setCancelable(false)
             .create()
 
-        btnAdjuntar.setOnClickListener {
+        actualizarTextoRecibo = { texto -> dialogo.txtReciboSeleccionado.text = texto }
+
+        dialogo.etTitulo.doAfterTextChanged { dialogo.tilTitulo.error = null }
+        dialogo.etMonto.doAfterTextChanged { dialogo.tilMonto.error = null }
+        dialogo.spCategoria.setOnItemClickListener { _, _, _, _ ->
+            dialogo.tilCategoria.error = null
+        }
+
+        dialogo.btnAdjuntarRecibo.setOnClickListener {
             seleccionarFotoGaleria.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             )
         }
 
-        btnCancelar.setOnClickListener { alertDialog.dismiss() }
+        dialogo.spCategoria.setOnClickListener { dialogo.spCategoria.showDropDown() }
 
-        btnGuardar.setOnClickListener {
-            val titulo = etTitulo.text.toString().trim()
-            val montoStr = etMonto.text.toString().trim()
-            val category = spCategoria.text.toString().trim()
+        dialogo.btnCancelar.setOnClickListener {
+            actualizarTextoRecibo = null
+            alertDialog.dismiss()
+        }
 
-            if (titulo.isNotEmpty() && montoStr.isNotEmpty() && category.isNotEmpty()) {
-                val monto = montoStr.toDoubleOrNull()
-                if (monto != null) {
-                    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                    val fechaHoraActual = sdf.format(Date())
+        dialogo.btnGuardar.setOnClickListener {
+            val titulo = dialogo.etTitulo.text?.toString().orEmpty().trim()
+            val montoTexto = dialogo.etMonto.text?.toString().orEmpty().trim()
+            val categoria = dialogo.spCategoria.text?.toString().orEmpty().trim()
 
-                    val nuevoGasto = Gasto(
-                        id = UUID.randomUUID().toString(),
-                        titulo = titulo,
-                        monto = monto,
-                        categoriaLaboral = category,
-                        fecha = fechaHoraActual,
-                        rutaFotoRecibo = uriReciboSeleccionado?.toString() ?: ""
-                    )
-
-                    viewModel.agregarGasto(nuevoGasto)
-                    Toast.makeText(this, "Gasto guardado con éxito", Toast.LENGTH_SHORT).show()
-                    alertDialog.dismiss()
-                } else {
-                    Toast.makeText(this, "Por favor, ingresa un monto válido", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "Por favor, completa todos los campos obligatorios", Toast.LENGTH_SHORT).show()
+            val validacion = Validador.validarGasto(titulo, montoTexto, categoria)
+            if (!validacion.esValido) {
+                mostrarErrorGasto(dialogo, validacion.error)
+                return@setOnClickListener
             }
+
+            val monto = Validador.parsearMonto(montoTexto) ?: return@setOnClickListener
+            val sello = Fechas.ahora()
+            val gasto = Gasto(
+                id = UUID.randomUUID().toString(),
+                titulo = titulo,
+                monto = monto,
+                categoriaLaboral = categoria,
+                fecha = sello.texto,
+                fechaMillis = sello.millis,
+                rutaFotoRecibo = null,
+                rutaReciboStorage = null
+            )
+
+            viewModel.agregarGasto(gasto, uriReciboSeleccionado)
+            uriReciboSeleccionado = null
+            actualizarTextoRecibo = null
+            alertDialog.dismiss()
         }
 
         alertDialog.show()
+    }
+
+    private fun mostrarErrorGasto(
+        dialogo: DialogAgregarGastoBinding,
+        error: ErrorValidacion?
+    ) {
+        when (error) {
+            ErrorValidacion.TITULO_VACIO ->
+                dialogo.tilTitulo.error = getString(R.string.error_titulo)
+            ErrorValidacion.TITULO_LARGO ->
+                dialogo.tilTitulo.error = getString(R.string.error_titulo_largo)
+            ErrorValidacion.MONTO_INVALIDO ->
+                dialogo.tilMonto.error = getString(R.string.error_monto)
+            ErrorValidacion.MONTO_NO_POSITIVO ->
+                dialogo.tilMonto.error = getString(R.string.error_monto_positivo)
+            ErrorValidacion.MONTO_EXCESIVO ->
+                dialogo.tilMonto.error = getString(R.string.error_monto_excesivo)
+            ErrorValidacion.CATEGORIA_VACIA ->
+                dialogo.tilCategoria.error = getString(R.string.error_categoria)
+            else -> Toast.makeText(this, R.string.campos_requeridos, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun mostrarDialogoAgregarIngreso() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_agregar_ingreso, null)
+        val dialogo = DialogAgregarIngresoBinding.inflate(layoutInflater)
 
-        val etConcepto = dialogView.findViewById<TextInputEditText>(R.id.etConceptoIngreso)
-        val etMonto = dialogView.findViewById<TextInputEditText>(R.id.etMontoIngreso)
-        val spCategoria = dialogView.findViewById<AutoCompleteTextView>(R.id.spCategoriaIngreso)
-        val btnCancelar = dialogView.findViewById<Button>(R.id.btnCancelarIngreso)
-        val btnGuardar = dialogView.findViewById<Button>(R.id.btnGuardarIngreso)
-
-        val categorias = arrayOf("Salario", "Bonos", "Remesas", "Otros ingresos")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, categorias)
-        spCategoria.setAdapter(adapter)
+        val categorias = resources.getStringArray(R.array.categorias_ingreso)
+        dialogo.spCategoriaIngreso.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, categorias)
+        )
 
         val alertDialog = MaterialAlertDialogBuilder(this)
-            .setView(dialogView)
+            .setTitle(R.string.titulo_dialogo_ingreso)
+            .setView(dialogo.root)
             .setCancelable(false)
             .create()
 
-        btnCancelar.setOnClickListener { alertDialog.dismiss() }
+        dialogo.etConceptoIngreso.doAfterTextChanged {
+            dialogo.tilConceptoIngreso.error = null
+        }
+        dialogo.etMontoIngreso.doAfterTextChanged { dialogo.tilMontoIngreso.error = null }
+        dialogo.spCategoriaIngreso.setOnItemClickListener { _, _, _, _ ->
+            dialogo.tilCategoriaIngreso.error = null
+        }
 
-        btnGuardar.setOnClickListener {
-            val concepto = etConcepto.text.toString().trim()
-            val montoStr = etMonto.text.toString().trim()
-            val categoria = spCategoria.text.toString().trim()
+        dialogo.btnCancelarIngreso.setOnClickListener { alertDialog.dismiss() }
 
-            if (concepto.isNotEmpty() && montoStr.isNotEmpty() && categoria.isNotEmpty()) {
-                val monto = montoStr.toDoubleOrNull()
-                if (monto != null && monto > 0) {
-                    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                    val fechaActual = sdf.format(Date())
+        dialogo.spCategoriaIngreso.setOnClickListener {
+            dialogo.spCategoriaIngreso.showDropDown()
+        }
 
-                    val nuevoIngreso = Ingreso(
-                        id = UUID.randomUUID().toString(),
-                        concepto = concepto,
-                        monto = monto,
-                        categoria = categoria,
-                        fecha = fechaActual
-                    )
+        dialogo.btnGuardarIngreso.setOnClickListener {
+            val concepto = dialogo.etConceptoIngreso.text?.toString().orEmpty().trim()
+            val montoTexto = dialogo.etMontoIngreso.text?.toString().orEmpty().trim()
+            val categoria = dialogo.spCategoriaIngreso.text?.toString().orEmpty().trim()
 
-                    viewModel.agregarIngreso(nuevoIngreso)
-                    Toast.makeText(this, "Ingreso añadido al presupuesto", Toast.LENGTH_SHORT).show()
-                    alertDialog.dismiss()
-                } else {
-                    Toast.makeText(this, "Por favor, ingresa un monto mayor a cero", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "Por favor, completa todos los campos", Toast.LENGTH_SHORT).show()
+            val validacion = Validador.validarIngreso(concepto, montoTexto, categoria)
+            if (!validacion.esValido) {
+                mostrarErrorIngreso(dialogo, validacion.error)
+                return@setOnClickListener
             }
+
+            val monto = Validador.parsearMonto(montoTexto) ?: return@setOnClickListener
+            val sello = Fechas.ahora()
+            val ingreso = Ingreso(
+                id = UUID.randomUUID().toString(),
+                concepto = concepto,
+                monto = monto,
+                categoria = categoria,
+                fecha = sello.texto,
+                fechaMillis = sello.millis
+            )
+
+            viewModel.agregarIngreso(ingreso)
+            alertDialog.dismiss()
         }
 
         alertDialog.show()
     }
 
-    private fun actualizarPantallaFinanciera() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // Consumo eficiente del uiState unificado del ViewModel
-                viewModel.uiState.collect { state ->
-                    txtPresupuesto.text = String.format(Locale.US, "$%.2f", state.presupuesto)
-                    txtTotalGastado.text = String.format(Locale.US, "$%.2f", state.totalGastado)
-                    txtDineroDisponible.text = String.format(Locale.US, "$%.2f", state.disponible)
-
-                    // Actualización del adaptador reactivo
-                    gastosAdapter.submitList(state.gastos)
-                }
-            }
+    private fun mostrarErrorIngreso(
+        dialogo: DialogAgregarIngresoBinding,
+        error: ErrorValidacion?
+    ) {
+        when (error) {
+            ErrorValidacion.CONCEPTO_VACIO ->
+                dialogo.tilConceptoIngreso.error = getString(R.string.error_concepto)
+            ErrorValidacion.MONTO_INVALIDO ->
+                dialogo.tilMontoIngreso.error = getString(R.string.error_monto)
+            ErrorValidacion.MONTO_NO_POSITIVO ->
+                dialogo.tilMontoIngreso.error = getString(R.string.error_monto_positivo)
+            ErrorValidacion.MONTO_EXCESIVO ->
+                dialogo.tilMontoIngreso.error = getString(R.string.error_monto_excesivo)
+            ErrorValidacion.CATEGORIA_VACIA ->
+                dialogo.tilCategoriaIngreso.error = getString(R.string.error_categoria)
+            else -> Toast.makeText(this, R.string.campos_requeridos, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun abrirRecibo(gasto: Gasto) {
+        val url = gasto.rutaFotoRecibo
+        if (url.isNullOrBlank()) {
+            Toast.makeText(this, R.string.recibo_no_disponible, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val uri = runCatching { Uri.parse(url) }.getOrNull()
+        if (uri == null || (uri.scheme != "https" && uri.scheme != "http")) {
+            Toast.makeText(this, R.string.recibo_no_disponible, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        runCatching { startActivity(intent) }
+            .onFailure {
+                Toast.makeText(this, R.string.error_abrir_recibo, Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    override fun onDestroy() {
+        actualizarTextoRecibo = null
+        super.onDestroy()
     }
 }

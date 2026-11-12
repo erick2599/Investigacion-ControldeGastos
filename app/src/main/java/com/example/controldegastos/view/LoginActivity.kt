@@ -1,128 +1,205 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.controldegastos.view
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView // IMPORT CORREGIDO
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.example.controldegastos.R
-import com.google.android.material.textfield.TextInputEditText
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
+import com.example.controldegastos.R
+import com.example.controldegastos.databinding.ActivityLoginBinding
+import com.example.controldegastos.domain.Validador
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class LoginActivity : AppCompatActivity() {
 
-    private lateinit var etEmail: TextInputEditText
-    private lateinit var etPassword: TextInputEditText
-    private lateinit var btnLogin: Button
-    private lateinit var btnRegister: Button
-    private lateinit var btnGoogleLogin: Button
-    private lateinit var tvOlvideContrasena: TextView // DECLARACIÓN DE VARIABLE CORREGIDA
-
+    private lateinit var binding: ActivityLoginBinding
     private val auth = FirebaseAuth.getInstance()
-    private lateinit var googleSignInClient: GoogleSignInClient
+    private var googleSignInClient: GoogleSignInClient? = null
+
+    private val launcherGoogle = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { resultado ->
+        if (resultado.resultCode != RESULT_OK) return@registerForActivityResult
+
+        lifecycleScope.launch {
+            try {
+                val cuenta = GoogleSignIn.getSignedInAccountFromIntent(resultado.data).await()
+                val token = cuenta.idToken
+                    ?: error(getString(R.string.google_error, "token vacío"))
+                auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
+                Toast.makeText(this@LoginActivity, R.string.google_exitoso, Toast.LENGTH_SHORT).show()
+                irAMainActivity()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@LoginActivity,
+                    getString(R.string.google_error, e.localizedMessage.orEmpty()),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
 
-        etEmail = findViewById(R.id.etEmail)
-        etPassword = findViewById(R.id.etPassword)
-        btnLogin = findViewById(R.id.btnLogin)
-        btnRegister = findViewById(R.id.btnRegister)
-        btnGoogleLogin = findViewById(R.id.btnGoogleLogin)
-        tvOlvideContrasena = findViewById(R.id.tvOlvideContrasena) // ASIGNACIÓN CORRECTA DENTRO DE ONCREATE
+        // Sesión recordada: si Firebase ya tiene un usuario, no mostramos el login.
+        if (auth.currentUser != null) {
+            irAMainActivity()
+            return
+        }
 
-        // Configuración de Google Sign-In (Asegúrate de cambiar este String por tu código real .apps.googleusercontent.com)
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("project-74174685981://googleusercontent.com")
+        binding = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        configurarGoogle()
+        configurarEventos()
+    }
+
+    private fun configurarGoogle() {
+        // El ID de cliente web se configura en res/values/strings.xml. Si está
+        // vacío, ocultamos el botón en lugar de fallar con un token inválido.
+        val webClientId = getString(R.string.google_web_client_id)
+        if (webClientId.isBlank()) {
+            binding.btnGoogleLogin.isVisible = false
+            return
+        }
+
+        val opciones = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
             .requestEmail()
             .build()
-        googleSignInClient = GoogleSignIn.getClient(this, gso)
+        googleSignInClient = GoogleSignIn.getClient(this, opciones)
 
-        // Login Tradicional con Firebase
-        btnLogin.setOnClickListener {
-            val email = etEmail.text.toString().trim()
-            val password = etPassword.text.toString().trim()
-
-            if (email.isNotEmpty() && password.isNotEmpty()) {
-                auth.signInWithEmailAndPassword(email, password)
-                    .addOnSuccessListener {
-                        Toast.makeText(this, "¡Bienvenido de nuevo!", Toast.LENGTH_SHORT).show()
-                        irAMainActivity()
-                    }
-                    .addOnFailureListener { e ->
-                        Toast.makeText(this, "Credenciales incorrectas: ${e.message}", Toast.LENGTH_LONG).show()
-                    }
-            } else {
-                Toast.makeText(this, "Por favor, completa todos los campos", Toast.LENGTH_SHORT).show()
+        binding.btnGoogleLogin.isVisible = true
+        binding.btnGoogleLogin.setOnClickListener {
+            googleSignInClient?.let { cliente ->
+                launcherGoogle.launch(cliente.signInIntent)
             }
         }
+    }
 
-        // Login con Google
-        btnGoogleLogin.setOnClickListener {
-            val signInIntent = googleSignInClient.signInIntent
-            launcherGoogle.launch(signInIntent)
+    private fun configurarEventos() {
+        binding.etEmail.doAfterTextChanged { binding.tilEmail.error = null }
+        binding.etPassword.doAfterTextChanged { binding.tilPassword.error = null }
+
+        binding.btnLogin.setOnClickListener { iniciarSesionConCorreo() }
+
+        binding.btnRegister.setOnClickListener {
+            startActivity(Intent(this, Register::class.java))
         }
 
-        btnRegister.setOnClickListener {
-            val intent = Intent(this, Register::class.java)
-            startActivity(intent)
-        }
+        binding.tvOlvideContrasena.setOnClickListener { enviarCorreoRestablecimiento() }
+    }
 
-        // BLOQUE CORREGIDO: Ahora está seguro dentro de onCreate
-        tvOlvideContrasena.setOnClickListener {
-            val email = etEmail.text.toString().trim()
+    private fun iniciarSesionConCorreo() {
+        val email = binding.etEmail.text?.toString().orEmpty().trim()
+        val contrasena = binding.etPassword.text?.toString().orEmpty()
 
-            if (email.isNotEmpty()) {
-                auth.sendPasswordResetEmail(email)
-                    .addOnSuccessListener {
-                        Toast.makeText(this, "Se ha enviado un correo para restablecer tu contraseña.", Toast.LENGTH_LONG).show()
-                    }
-                    .addOnFailureListener { e ->
-                        Toast.makeText(this, "Error al enviar el correo: ${e.message}", Toast.LENGTH_LONG).show()
-                    }
-            } else {
-                Toast.makeText(this, "Por favor, ingresa tu correo electrónico primero en el campo de texto", Toast.LENGTH_SHORT).show()
-            }
-        }
-    } // AQUÍ CIERRA CORRECTAMENTE ONCREATE
+        if (!validarCredenciales(email, contrasena)) return
 
-    // Receptor del resultado de la pantalla de Google
-    private val launcherGoogle = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        setCargando(true)
+        lifecycleScope.launch {
             try {
-                val cuenta = task.getResult(ApiException::class.java)
-                cuenta?.idToken?.let { token ->
-                    val credencial = GoogleAuthProvider.getCredential(token, null)
-                    auth.signInWithCredential(credencial)
-                        .addOnSuccessListener {
-                            Toast.makeText(this, "Inicio de sesión con Google exitoso", Toast.LENGTH_SHORT).show()
-                            irAMainActivity()
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(this, "Error Firebase: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                }
-            } catch (e: ApiException) {
-                Toast.makeText(this, "Error Google: ${e.message}", Toast.LENGTH_LONG).show()
+                auth.signInWithEmailAndPassword(email, contrasena).await()
+                Toast.makeText(this@LoginActivity, R.string.bienvenido, Toast.LENGTH_SHORT).show()
+                irAMainActivity()
+            } catch (e: FirebaseAuthException) {
+                binding.tilPassword.error = mensajeDeError(e)
+            } catch (e: Exception) {
+                binding.tilPassword.error = getString(
+                    R.string.error_iniciar_sesion,
+                    e.localizedMessage.orEmpty()
+                )
+            } finally {
+                setCargando(false)
             }
         }
+    }
+
+    private fun enviarCorreoRestablecimiento() {
+        val email = binding.etEmail.text?.toString().orEmpty().trim()
+        if (!Validador.esEmailValido(email)) {
+            binding.tilEmail.error = getString(R.string.error_correo)
+            return
+        }
+
+        setCargando(true)
+        lifecycleScope.launch {
+            try {
+                auth.sendPasswordResetEmail(email).await()
+                Toast.makeText(
+                    this@LoginActivity,
+                    R.string.restablecer_enviado,
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (e: FirebaseAuthException) {
+                Toast.makeText(this@LoginActivity, mensajeDeError(e), Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@LoginActivity,
+                    getString(R.string.error_restablecer, e.localizedMessage.orEmpty()),
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                setCargando(false)
+            }
+        }
+    }
+
+    private fun validarCredenciales(email: String, contrasena: String): Boolean {
+        if (email.isBlank()) {
+            binding.tilEmail.error = getString(R.string.error_correo)
+            return false
+        }
+        if (!Validador.esEmailValido(email)) {
+            binding.tilEmail.error = getString(R.string.error_correo)
+            return false
+        }
+        if (!Validador.validarContrasena(contrasena).esValido) {
+            binding.tilPassword.error = getString(R.string.error_contrasena)
+            return false
+        }
+        return true
+    }
+
+    private fun mensajeDeError(error: FirebaseAuthException): String = when (error.errorCode) {
+        "ERROR_INVALID_CREDENTIALS",
+        "ERROR_INVALID_EMAIL",
+        "ERROR_USER_NOT_FOUND",
+        "ERROR_WRONG_PASSWORD" -> getString(R.string.error_credenciales)
+        "ERROR_NETWORK_REQUEST_FAILED" -> getString(R.string.error_sin_conexion)
+        "ERROR_TOO_MANY_REQUESTS" -> getString(R.string.error_demasiados_intentos)
+        else -> getString(R.string.error_firebase, error.localizedMessage.orEmpty())
+    }
+
+    private fun setCargando(cargando: Boolean) {
+        binding.progressLogin.isVisible = cargando
+        binding.etEmail.isEnabled = !cargando
+        binding.etPassword.isEnabled = !cargando
+        binding.btnLogin.isEnabled = !cargando
+        binding.btnRegister.isEnabled = !cargando
+        binding.btnGoogleLogin.isEnabled = !cargando
+        binding.tvOlvideContrasena.isEnabled = !cargando
     }
 
     private fun irAMainActivity() {
-        val intent = Intent(this, MainActivity::class.java)
-        // Estas banderas aseguran que MainActivity se abra de forma limpia como pantalla principal
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
         finish()
     }
-
 }

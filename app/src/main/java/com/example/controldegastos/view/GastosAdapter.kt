@@ -6,12 +6,14 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.example.controldegastos.databinding.ItemGastoBinding
+import com.example.controldegastos.domain.Dinero
 import com.example.controldegastos.model.Gasto
-import java.util.Locale
 
 class GastosAdapter(
-    private val onEliminar: (Gasto) -> Unit
+    private val onEliminar: (Gasto) -> Unit,
+    private val onReciboClick: (Gasto) -> Unit
 ) : ListAdapter<Gasto, GastosAdapter.GastoViewHolder>(DIFF_CALLBACK) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GastoViewHolder {
@@ -35,14 +37,24 @@ class GastosAdapter(
             binding.txtTituloGasto.text = gasto.titulo
             binding.txtCategoriaGasto.text = gasto.categoriaLaboral
             binding.txtFechaGasto.text = gasto.fecha
-            binding.txtMontoGasto.text = "-" + String.format(Locale.US, "\$%,.2f", gasto.monto)
-            binding.imgRecibo.isVisible = gasto.rutaFotoRecibo != null
+            binding.txtMontoGasto.text = Dinero.formatearGasto(Dinero.aCentavos(gasto.monto))
 
-            binding.btnEliminarGasto.setOnClickListener { onEliminar(gasto) }
-            binding.root.setOnLongClickListener {
-                onEliminar(gasto)
-                true
+            val urlRecibo = gasto.rutaFotoRecibo
+            val tieneRecibo = !urlRecibo.isNullOrBlank()
+
+            binding.imgRecibo.isVisible = tieneRecibo
+            if (tieneRecibo) {
+                binding.imgRecibo.load(urlRecibo) {
+                    placeholder(android.R.drawable.ic_menu_camera)
+                    error(android.R.drawable.ic_menu_camera)
+                    crossfade(true)
+                }
             }
+
+            binding.imgRecibo.setOnClickListener {
+                if (tieneRecibo) onReciboClick(gasto)
+            }
+            binding.btnEliminarGasto.setOnClickListener { onEliminar(gasto) }
         }
     }
 

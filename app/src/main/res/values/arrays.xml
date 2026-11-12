@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="categorias_gasto">
+        <item>Alimentación</item>
+        <item>Transporte</item>
+        <item>Vivienda y Hogar</item>
+        <item>Servicios Básicos</item>
+        <item>Salud y Farmacia</item>
+        <item>Entretenimiento</item>
+        <item>Educación</item>
+        <item>Compras y Ropa</item>
+        <item>Otros</item>
+    </string-array>
+
+    <string-array name="categorias_ingreso">
+        <item>Salario</item>
+        <item>Bonos</item>
+        <item>Remesas</item>
+        <item>Otros ingresos</item>
+    </string-array>
+
+    <string-array name="opciones_registro">
+        <item>@string/menu_registrar_gasto</item>
+        <item>@string/menu_registrar_ingreso</item>
+    </string-array>
+</resources>

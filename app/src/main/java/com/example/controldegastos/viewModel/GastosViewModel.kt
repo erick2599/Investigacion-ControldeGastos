@@ -1,118 +1,136 @@
 package com.example.controldegastos.viewModel
 
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.controldegastos.data.FirebaseGastosRepository
+import com.example.controldegastos.data.GastosRepository
+import com.example.controldegastos.domain.BalanceCalculator
 import com.example.controldegastos.model.Gasto
 import com.example.controldegastos.model.Ingreso
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class GastosUiState(
-    val presupuesto: Double = 0.0,
+    val presupuestoCentavos: Long = 0L,
     val gastos: List<Gasto> = emptyList(),
-    val totalGastado: Double = 0.0,
-    val disponible: Double = 0.0
+    val totalGastadoCentavos: Long = 0L,
+    val disponibleCentavos: Long = 0L,
+    val cargando: Boolean = false,
+    val guardando: Boolean = false
 )
 
-class GastosViewModel : ViewModel() {
+sealed interface UiEvent {
+    data object GastoGuardado : UiEvent
+    data object IngresoGuardado : UiEvent
+    data object GastoEliminado : UiEvent
+    data object ErrorGuardarGasto : UiEvent
+    data object ErrorGuardarIngreso : UiEvent
+    data object ErrorEliminarGasto : UiEvent
+    data object ErrorCargarDatos : UiEvent
+}
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+class GastosViewModel(
+    private val repositorio: GastosRepository
+) : ViewModel() {
 
-    private val _listaIngresos = MutableStateFlow<List<Ingreso>>(emptyList())
-    val listaIngresos: StateFlow<List<Ingreso>> = _listaIngresos
+    private val _guardando = MutableStateFlow(false)
+    private val _eventos = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
+    val eventos: SharedFlow<UiEvent> = _eventos.asSharedFlow()
 
-    private val _listaGastos = MutableStateFlow<List<Gasto>>(emptyList())
-    val listaGastos: StateFlow<List<Gasto>> = _listaGastos
+    private val _nombreUsuario = MutableStateFlow<String?>(null)
+    val nombreUsuario: StateFlow<String?> = _nombreUsuario
 
-    // El uiState unificado calcula automáticamente las operaciones numéricas en tiempo real
-    val uiState: StateFlow<GastosUiState> =
-        combine(_listaGastos, _listaIngresos) { gastos, ingresos ->
-            val totalIngresos = ingresos.sumOf { it.monto }
-            val totalGastos = gastos.sumOf { it.monto }
-            GastosUiState(
-                presupuesto = totalIngresos,
-                gastos = gastos,
-                totalGastado = totalGastos,
-                disponible = totalIngresos - totalGastos
-            )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = GastosUiState()
+    val uiState: StateFlow<GastosUiState> = combine(
+        repositorio.observarGastos().conManejoDeError(),
+        repositorio.observarIngresos().conManejoDeError(),
+        _guardando
+    ) { gastos, ingresos, guardando ->
+        val balance = BalanceCalculator.calcular(gastos, ingresos)
+        GastosUiState(
+            presupuestoCentavos = balance.presupuestoCentavos,
+            gastos = gastos,
+            totalGastadoCentavos = balance.totalGastadoCentavos,
+            disponibleCentavos = balance.disponibleCentavos,
+            cargando = false,
+            guardando = guardando
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = GastosUiState(cargando = true)
+    )
 
     init {
-        // En cuanto el ViewModel se crea en la pantalla principal, empezamos a escuchar Firebase
-        escucharDatosDesdeFirebase()
-    }
-
-    /**
-     * Escucha en tiempo real (Realtime Listeners) las colecciones de Firebase.
-     * Cualquier cambio en la nube se reflejará en la tablet al instante.
-     */
-    private fun escucharDatosDesdeFirebase() {
-        val emailUsuario = auth.currentUser?.email ?: return
-
-        // 1. Escuchar Historial de Gastos
-        db.collection("usuarios").document(emailUsuario).collection("gastos")
-            .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null) {
-                    val listaDocumentos = snapshot.toObjects(Gasto::class.java)
-                    // Ordenamos cronológicamente si es necesario o los enviamos directo
-                    _listaGastos.value = listaDocumentos
-                }
+        viewModelScope.launch {
+            repositorio.migrarDatosLegacy().onFailure {
+                Log.w(TAG, "No se pudo migrar la ruta antigua por email", it)
             }
-
-        // 2. Escuchar Historial de Ingresos
-        db.collection("usuarios").document(emailUsuario).collection("ingresos")
-            .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null) {
-                    val listaDocumentos = snapshot.toObjects(Ingreso::class.java)
-                    _listaIngresos.value = listaDocumentos
-                }
-            }
+            _nombreUsuario.value = repositorio.obtenerNombreUsuario()
+        }
     }
 
-    /**
-     * Guarda un nuevo gasto en una subcolección dentro del documento del usuario.
-     */
-    fun agregarGasto(gasto: Gasto) {
-        val emailUsuario = auth.currentUser?.email ?: return
-
-        db.collection("usuarios").document(emailUsuario).collection("gastos")
-            .document(gasto.id)
-            .set(gasto)
+    fun agregarGasto(gasto: Gasto, reciboUri: Uri?) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.agregarGasto(gasto, reciboUri)
+                .onSuccess { _eventos.emit(UiEvent.GastoGuardado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorGuardarGasto) }
+            _guardando.value = false
+        }
     }
 
-    /**
-     * Guarda un nuevo ingreso de forma acumulativa en la subcolección correspondiente.
-     */
     fun agregarIngreso(ingreso: Ingreso) {
-        val emailUsuario = auth.currentUser?.email ?: return
-
-        db.collection("usuarios").document(emailUsuario).collection("ingresos")
-            .document(ingreso.id)
-            .set(ingreso)
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.agregarIngreso(ingreso)
+                .onSuccess { _eventos.emit(UiEvent.IngresoGuardado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorGuardarIngreso) }
+            _guardando.value = false
+        }
     }
 
-    /**
-     * Elimina físicamente un gasto de la nube usando su identificador único.
-     */
-    fun eliminarGasto(id: String) {
-        val emailUsuario = auth.currentUser?.email ?: return
-
-        db.collection("usuarios").document(emailUsuario).collection("gastos")
-            .document(id)
-            .delete()
+    fun eliminarGasto(gasto: Gasto) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.eliminarGasto(gasto)
+                .onSuccess { _eventos.emit(UiEvent.GastoEliminado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorEliminarGasto) }
+            _guardando.value = false
+        }
     }
 
-    fun obtenerTotalGastado(): Double = _listaGastos.value.sumOf { it.monto }
-    fun obtenerPresupuestoTotal(): Double = _listaIngresos.value.sumOf { it.monto }
-    fun obtenerDineroDisponible(): Double = obtenerPresupuestoTotal() - obtenerTotalGastado()
+    private fun <T> Flow<List<T>>.conManejoDeError(): Flow<List<T>> = catch { error ->
+        if (error is CancellationException) throw error
+        Log.e(TAG, "No se pudieron cargar los datos", error)
+        _eventos.tryEmit(UiEvent.ErrorCargarDatos)
+        emit(emptyList())
+    }
+
+    companion object {
+        private const val TAG = "GastosViewModel"
+
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                GastosViewModel(FirebaseGastosRepository())
+            }
+        }
+    }
 }

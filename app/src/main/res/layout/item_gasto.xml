@@ -2,7 +2,6 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-                                                   android:background="@android:color/white"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
@@ -71,11 +70,15 @@
 
             <ImageView
                 android:id="@+id/imgRecibo"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:layout_gravity="end"
                 android:layout_marginTop="4dp"
-                android:contentDescription="@string/recibo"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="@string/ver_recibo"
+                android:focusable="true"
+                android:padding="4dp"
                 android:src="@android:drawable/ic_menu_camera"
                 android:visibility="gone"
                 app:tint="@color/texto_secundario" />
@@ -83,12 +86,12 @@
 
         <ImageButton
             android:id="@+id/btnEliminarGasto"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/eliminar_gasto"
-            android:padding="8dp"
+            android:padding="12dp"
             android:src="@android:drawable/ic_menu_delete"
             app:tint="@color/rojo_gasto" />
     </LinearLayout>
