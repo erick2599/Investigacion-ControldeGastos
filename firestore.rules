@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// Reglas de Firestore para Control de Gastos.
+//
+// Los datos viven bajo usuarios/{uid}. Se permite además el acceso a la ruta
+// antigua usuarios/{email} mientras el cliente migra los datos una sola vez.
+// Después de migrar todos los usuarios se puede eliminar la condición del email.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /usuarios/{usuarioId} {
+      function autenticado() {
+        return request.auth != null;
+      }
+
+      function esPropietario() {
+        return autenticado() && (
+          request.auth.uid == usuarioId ||
+          (
+            request.auth.token.email != null &&
+            (
+              request.auth.token.email == usuarioId ||
+              request.auth.token.email.lower() == usuarioId
+            )
+          )
+        );
+      }
+
+      function montoValido() {
+        return request.resource.data.monto is number &&
+               request.resource.data.monto > 0 &&
+               request.resource.data.monto <= 1000000000;
+      }
+
+      // Perfil del usuario.
+      allow read, write: if esPropietario();
+
+      match /gastos/{gastoId} {
+        allow read, delete: if esPropietario();
+        allow create, update: if esPropietario() &&
+          request.resource.data.titulo is string &&
+          request.resource.data.titulo.size() > 0 &&
+          request.resource.data.titulo.size() <= 120 &&
+          request.resource.data.categoriaLaboral is string &&
+          request.resource.data.categoriaLaboral.size() <= 80 &&
+          montoValido();
+      }
+
+      match /ingresos/{ingresoId} {
+        allow read, delete: if esPropietario();
+        allow create, update: if esPropietario() &&
+          request.resource.data.concepto is string &&
+          request.resource.data.concepto.size() > 0 &&
+          request.resource.data.concepto.size() <= 120 &&
+          request.resource.data.categoria is string &&
+          request.resource.data.categoria.size() <= 80 &&
+          montoValido();
+      }
+    }
+
+    // Todo lo demás queda cerrado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
