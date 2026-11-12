@@ -1,4 +1,3 @@
-
 name: CI - Gestor de Gastos
 
 on:
@@ -29,7 +28,62 @@ jobs:
         run: chmod +x gradlew
 
       - name: Compilar aplicación Android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --console=plain
 
-      - name: Ejecutar pruebas
-        run: ./gradlew test
+      - name: Ejecutar pruebas unitarias
+        run: ./gradlew test --console=plain
+
+      - name: Ejecutar análisis estático
+        run: ./gradlew lintDebug --console=plain
+
+      - name: Compilar release con R8
+        run: ./gradlew assembleRelease --console=plain
+
+      - name: Publicar reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes
+          path: |
+            app/build/reports/tests/**
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+            app/build/reports/lint-results-debug.txt
+          if-no-files-found: ignore
+
+  firebase-rules:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firebase-tests
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: firebase-tests/package-lock.json
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Probar reglas con los emuladores
+        run: npm run test:rules
+
+      - name: Publicar logs de los emuladores
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-emuladores-firebase
+          path: firebase-tests/*-debug.log
+          if-no-files-found: ignore
