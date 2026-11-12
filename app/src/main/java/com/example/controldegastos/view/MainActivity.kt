@@ -153,7 +153,16 @@ class MainActivity : AppCompatActivity() {
         val btnCancelar = dialogView.findViewById<Button>(R.id.btnCancelar)
         val btnGuardar = dialogView.findViewById<Button>(R.id.btnGuardar)
 
-        val categorias = arrayOf("Operaciones", "Alimentación", "Transporte", "Servicios", "Otros")
+        val categorias = arrayOf(
+            "Alimentación",
+            "Transporte",
+            "Vivienda y Hogar",
+            "Servicios Básicos",
+            "Salud y Farmacia",
+            "Entretenimiento",
+            "Educación",
+            "Compras y Ropa",
+            "Otros")
         // Cambia esto tanto en mostrarDialogoAgregarGasto() como en mostrarDialogoAgregarIngreso()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, categorias)
 
