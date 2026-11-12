@@ -1,9 +1,9 @@
 package com.example.controldegastos.model
 
 data class Ingreso(
-    val id: String,
-    val concepto: String,
-    val monto: Double,
-    val categoria: String, // "Salario", "Bono", "Remesa", "Otros"
-    val fecha: String
+    val id: String = "",
+    val concepto: String = "",
+    val monto: Double = 0.0,
+    val categoria: String = "",
+    val fecha: String = ""
 )
