@@ -44,6 +44,27 @@ También se ejecuta en el trabajo `firebase-rules` de GitHub Actions.
 
 > Si el proyecto sigue en **modo de prueba**, cualquier persona con la API key
 > podría leer o escribir datos. Desplegar las reglas es el paso más importante.
+> Estado actual: las reglas de Firestore están publicadas y una lectura sin
+> autenticación devuelve `403 PERMISSION_DENIED`. Las de Storage quedan
+> pendientes hasta activar el plan Blaze.
+
+### 1.2. Storage requiere Blaze
+
+Cloud Storage for Firebase ya no está disponible en el plan Spark: la consola
+pide un método de pago para activar **Blaze**. No es un cobro si se respeta el
+nivel sin costo, pero solo aplica si el bucket está en `us-central1`,
+`us-west1` o `us-east1`:
+
+| Concepto | Sin costo al mes |
+|---|---|
+| Almacenado | 5 GB |
+| Descargado | 100 GB |
+| Subidas | 5.000 |
+| Descargas | 50.000 |
+
+Con el límite de 5 MB por recibo, 5 GB equivalen a ~1.000 fotos. Conviene crear
+una alerta de presupuesto en Google Cloud (Facturación → Presupuestos); la
+alerta avisa, no bloquea el gasto.
 
 Después de comprobar que todos los usuarios migraron a `usuarios/{uid}`, se puede
 eliminar la condición del email en `firestore.rules` y volver a desplegar.
@@ -63,8 +84,16 @@ Firebase de desarrollo.
 
 ## 3. Inicio de sesión con Google
 
-Actualmente el botón se **oculta** si no hay un ID de cliente web configurado.
-Para habilitarlo:
+El botón se **oculta** si no hay un ID de cliente web configurado. En este
+proyecto ya está configurado:
+
+- Web client ID en `app/src/main/res/values/strings.xml`.
+- SHA-1 de depuración:
+  `3E:77:FA:6A:92:25:17:54:1D:ED:AC:94:1E:7C:34:BD:E2:E3:D2:92`.
+- El proveedor Google está habilitado (verificado contra Identity Toolkit).
+
+Falta probar el flujo en un dispositivo y, si se firma el release, registrar
+también su SHA-1. Para replicar la configuración en otro entorno:
 
 1. En Google Cloud Console → *APIs y servicios* → *Credenciales*, crea un
    **ID de cliente de OAuth 2.0** de tipo *Aplicación web*.
