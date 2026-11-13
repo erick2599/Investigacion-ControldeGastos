@@ -58,7 +58,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (auth.currentUser == null) {
+        val usuario = auth.currentUser
+        if (usuario == null || !usuario.isEmailVerified) {
             irALogin()
             return
         }

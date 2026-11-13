@@ -17,6 +17,8 @@ const UID_A = "uid-alice";
 const UID_B = "uid-bob";
 const PATH_A = `usuarios/${UID_A}/recibos/recibo.jpg`;
 const PATH_B = `usuarios/${UID_B}/recibos/recibo.jpg`;
+/** Token de Firebase Auth con el correo ya verificado. */
+const VERIFICADO = { email_verified: true };
 
 const imagen = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 
@@ -43,7 +45,7 @@ afterAll(async () => {
 
 describe("recibos en Storage", () => {
   it("permite al propietario subir, leer y borrar una imagen", async () => {
-    const storage = testEnv.authenticatedContext(UID_A).storage();
+    const storage = testEnv.authenticatedContext(UID_A, VERIFICADO).storage();
 
     await assertSucceeds(
       uploadBytes(ref(storage, PATH_A), imagen, { contentType: "image/jpeg" })
@@ -53,7 +55,7 @@ describe("recibos en Storage", () => {
   });
 
   it("rechaza subir a la carpeta de otro usuario", async () => {
-    const storage = testEnv.authenticatedContext(UID_B).storage();
+    const storage = testEnv.authenticatedContext(UID_B, VERIFICADO).storage();
 
     await assertFails(
       uploadBytes(ref(storage, PATH_A), imagen, { contentType: "image/jpeg" })
@@ -61,10 +63,10 @@ describe("recibos en Storage", () => {
   });
 
   it("rechaza leer o borrar recibos de otro usuario", async () => {
-    const storageA = testEnv.authenticatedContext(UID_A).storage();
+    const storageA = testEnv.authenticatedContext(UID_A, VERIFICADO).storage();
     await uploadBytes(ref(storageA, PATH_A), imagen, { contentType: "image/jpeg" });
 
-    const storageB = testEnv.authenticatedContext(UID_B).storage();
+    const storageB = testEnv.authenticatedContext(UID_B, VERIFICADO).storage();
     await assertFails(getBytes(ref(storageB, PATH_A)));
     await assertFails(deleteObject(ref(storageB, PATH_A)));
   });
@@ -79,7 +81,7 @@ describe("recibos en Storage", () => {
   });
 
   it("rechaza archivos que no son imágenes", async () => {
-    const storage = testEnv.authenticatedContext(UID_A).storage();
+    const storage = testEnv.authenticatedContext(UID_A, VERIFICADO).storage();
 
     await assertFails(
       uploadBytes(ref(storage, PATH_A), new TextEncoder().encode("no soy imagen"), {
@@ -89,7 +91,7 @@ describe("recibos en Storage", () => {
   });
 
   it("rechaza imágenes de 5 MB o más", async () => {
-    const storage = testEnv.authenticatedContext(UID_A).storage();
+    const storage = testEnv.authenticatedContext(UID_A, VERIFICADO).storage();
     const grande = new Uint8Array(5 * 1024 * 1024);
 
     await assertFails(
@@ -97,8 +99,19 @@ describe("recibos en Storage", () => {
     );
   });
 
+  it("rechaza a un usuario con el correo sin verificar", async () => {
+    const storage = testEnv
+      .authenticatedContext(UID_A, { email_verified: false })
+      .storage();
+
+    await assertFails(
+      uploadBytes(ref(storage, PATH_A), imagen, { contentType: "image/jpeg" })
+    );
+    await assertFails(getBytes(ref(storage, PATH_A)));
+  });
+
   it("rechaza rutas fuera de usuarios/{uid}/recibos", async () => {
-    const storage = testEnv.authenticatedContext(UID_A).storage();
+    const storage = testEnv.authenticatedContext(UID_A, VERIFICADO).storage();
 
     await assertFails(
       uploadBytes(ref(storage, `usuarios/${UID_A}/otra/recibo.jpg`), imagen, {

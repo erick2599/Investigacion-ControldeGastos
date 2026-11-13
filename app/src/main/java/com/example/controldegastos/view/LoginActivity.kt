@@ -18,6 +18,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -27,6 +28,8 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
     private val auth = FirebaseAuth.getInstance()
     private var googleSignInClient: GoogleSignInClient? = null
+    private var comprobandoVerificacion = false
+    private var navegando = false
 
     private val launcherGoogle = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -39,8 +42,7 @@ class LoginActivity : AppCompatActivity() {
                 val token = cuenta.idToken
                     ?: error(getString(R.string.google_error, "token vacío"))
                 auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
-                Toast.makeText(this@LoginActivity, R.string.google_exitoso, Toast.LENGTH_SHORT).show()
-                irAMainActivity()
+                continuarSiEstaVerificado()
             } catch (e: Exception) {
                 Toast.makeText(
                     this@LoginActivity,
@@ -53,18 +55,42 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Sesión recordada: si Firebase ya tiene un usuario, no mostramos el login.
-        if (auth.currentUser != null) {
-            irAMainActivity()
-            return
-        }
-
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         configurarGoogle()
         configurarEventos()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val usuario = auth.currentUser
+        if (usuario == null) {
+            mostrarLogin()
+        } else {
+            manejarSesionExistente()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!::binding.isInitialized) return
+
+        // Al volver del navegador tras abrir el enlace del correo, comprobamos
+        // la verificación sin que el usuario tenga que pulsar nada.
+        val usuario = auth.currentUser
+        if (usuario != null) {
+            if (usuario.isEmailVerified) {
+                irAMainActivity()
+            } else {
+                if (!binding.panelVerificacion.isVisible) {
+                    mostrarPanelVerificacion(usuario.email.orEmpty())
+                }
+                comprobarVerificacion(manual = false)
+            }
+        } else if (!binding.panelLogin.isVisible) {
+            mostrarLogin()
+        }
     }
 
     private fun configurarGoogle() {
@@ -101,6 +127,12 @@ class LoginActivity : AppCompatActivity() {
         }
 
         binding.tvOlvideContrasena.setOnClickListener { enviarCorreoRestablecimiento() }
+
+        binding.btnYaVerifique.setOnClickListener {
+            comprobarVerificacion(manual = true)
+        }
+        binding.btnReenviarVerificacion.setOnClickListener { reenviarVerificacion() }
+        binding.btnCerrarSesionVerificacion.setOnClickListener { cerrarSesionPendiente() }
     }
 
     private fun iniciarSesionConCorreo() {
@@ -113,8 +145,7 @@ class LoginActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 auth.signInWithEmailAndPassword(email, contrasena).await()
-                Toast.makeText(this@LoginActivity, R.string.bienvenido, Toast.LENGTH_SHORT).show()
-                irAMainActivity()
+                continuarSiEstaVerificado()
             } catch (e: FirebaseAuthException) {
                 binding.tilPassword.error = mensajeDeError(e)
             } catch (e: Exception) {
@@ -126,6 +157,154 @@ class LoginActivity : AppCompatActivity() {
                 setCargando(false)
             }
         }
+    }
+
+    /**
+     * Solo deja pasar a la pantalla principal si el correo está verificado.
+     * Si no, muestra el panel para verificar o reenviar el correo.
+     */
+    private suspend fun continuarSiEstaVerificado() {
+        val usuario = auth.currentUser
+        if (usuario == null) {
+            mostrarLogin()
+            return
+        }
+
+        runCatching { usuario.reload().await() }
+
+        if (usuario.isEmailVerified) {
+            // Forzamos un token nuevo para que las reglas del servidor vean
+            // el correo ya verificado en la primera lectura.
+            runCatching { usuario.getIdToken(true).await() }
+            Toast.makeText(this@LoginActivity, R.string.bienvenido, Toast.LENGTH_SHORT).show()
+            irAMainActivity()
+        } else {
+            mostrarPanelVerificacion(usuario.email.orEmpty())
+            Toast.makeText(
+                this@LoginActivity,
+                R.string.cuenta_sin_verificar,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun manejarSesionExistente() {
+        val usuario = auth.currentUser ?: run {
+            mostrarLogin()
+            return
+        }
+
+        if (usuario.isEmailVerified) {
+            irAMainActivity()
+            return
+        }
+
+        mostrarPanelVerificacion(usuario.email.orEmpty())
+        // La sesión guardada puede tener el estado desactualizado: comprobamos
+        // en segundo plano y, si ya está verificado, continuamos solos.
+        comprobarVerificacion(manual = false)
+    }
+
+    private fun comprobarVerificacion(manual: Boolean) {
+        if (comprobandoVerificacion) return
+        val usuario = auth.currentUser ?: run {
+            mostrarLogin()
+            return
+        }
+
+        comprobandoVerificacion = true
+        if (manual) setCargandoVerificacion(true)
+
+        lifecycleScope.launch {
+            var mensajeError: String? = null
+            try {
+                usuario.reload().await()
+                if (usuario.isEmailVerified) {
+                    runCatching { usuario.getIdToken(true).await() }
+                    Toast.makeText(
+                        this@LoginActivity,
+                        R.string.correo_verificado,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    irAMainActivity()
+                    return@launch
+                }
+            } catch (e: FirebaseAuthInvalidUserException) {
+                auth.signOut()
+                mostrarLogin()
+                return@launch
+            } catch (e: Exception) {
+                mensajeError = e.localizedMessage.orEmpty()
+            } finally {
+                comprobandoVerificacion = false
+                if (manual) setCargandoVerificacion(false)
+            }
+
+            if (manual) {
+                val mensaje = if (mensajeError == null) {
+                    getString(R.string.correo_no_verificado)
+                } else {
+                    getString(R.string.error_verificar, mensajeError)
+                }
+                Toast.makeText(this@LoginActivity, mensaje, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun reenviarVerificacion() {
+        val usuario = auth.currentUser ?: run {
+            mostrarLogin()
+            return
+        }
+
+        setCargandoVerificacion(true)
+        lifecycleScope.launch {
+            try {
+                usuario.sendEmailVerification().await()
+                Toast.makeText(
+                    this@LoginActivity,
+                    R.string.reenviar_enviado,
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (e: FirebaseAuthException) {
+                Toast.makeText(
+                    this@LoginActivity,
+                    getString(R.string.error_reenviar, mensajeDeError(e)),
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@LoginActivity,
+                    getString(R.string.error_reenviar, e.localizedMessage.orEmpty()),
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                setCargandoVerificacion(false)
+            }
+        }
+    }
+
+    private fun cerrarSesionPendiente() {
+        auth.signOut()
+        binding.etPassword.text?.clear()
+        mostrarLogin()
+    }
+
+    private fun mostrarLogin() {
+        binding.panelLogin.isVisible = true
+        binding.panelVerificacion.isVisible = false
+        binding.progressVerificacion.isVisible = false
+        setCargando(false)
+    }
+
+    private fun mostrarPanelVerificacion(email: String) {
+        binding.panelLogin.isVisible = false
+        binding.panelVerificacion.isVisible = true
+        binding.txtVerificacionMensaje.text = getString(
+            R.string.verificacion_mensaje,
+            email.ifBlank { getString(R.string.tu_correo) }
+        )
+        setCargandoVerificacion(false)
     }
 
     private fun enviarCorreoRestablecimiento() {
@@ -194,7 +373,17 @@ class LoginActivity : AppCompatActivity() {
         binding.tvOlvideContrasena.isEnabled = !cargando
     }
 
+    private fun setCargandoVerificacion(cargando: Boolean) {
+        binding.progressVerificacion.isVisible = cargando
+        binding.btnYaVerifique.isEnabled = !cargando
+        binding.btnReenviarVerificacion.isEnabled = !cargando
+        binding.btnCerrarSesionVerificacion.isEnabled = !cargando
+    }
+
     private fun irAMainActivity() {
+        if (navegando) return
+        navegando = true
+
         startActivity(
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

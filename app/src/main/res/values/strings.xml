@@ -29,7 +29,6 @@
     <string name="restablecer_enviado">Se ha enviado un correo para restablecer tu contraseña.</string>
     <string name="error_restablecer">No se pudo enviar el correo: %1$s</string>
     <string name="google_error">Error al iniciar sesión con Google: %1$s</string>
-    <string name="google_exitoso">Inicio de sesión con Google exitoso</string>
     <string name="error_firebase">Error de Firebase: %1$s</string>
     <!-- Coloca aquí el ID de cliente web de OAuth (termina en .apps.googleusercontent.com).
          Si queda vacío, el botón de Google se oculta. Ver Docs/SEGURIDAD-FIREBASE.md. -->
@@ -39,13 +38,28 @@
     <string name="error_email_en_uso">Ya existe una cuenta con este correo electrónico.</string>
     <string name="error_contrasena_debil">La contraseña es demasiado débil.</string>
 
+    <!-- Verificación de correo -->
+    <string name="verificacion_titulo">Verifica tu correo electrónico</string>
+    <string name="verificacion_mensaje">Enviamos un enlace de verificación a %1$s.\n\nAbre el enlace y vuelve a la app. Si no lo ves, revisa la carpeta de spam.</string>
+    <string name="ya_verifique">Ya verifiqué mi correo</string>
+    <string name="reenviar_correo">Reenviar correo de verificación</string>
+    <string name="usar_otra_cuenta">Usar otra cuenta</string>
+    <string name="correo_no_verificado">Tu correo aún no está verificado. Revisa tu bandeja de entrada y la carpeta de spam.</string>
+    <string name="correo_verificado">¡Correo verificado! Bienvenido.</string>
+    <string name="reenviar_enviado">Te enviamos un nuevo correo de verificación.</string>
+    <string name="error_reenviar">No se pudo enviar el correo: %1$s</string>
+    <string name="cuenta_sin_verificar">Debes verificar tu correo antes de continuar.</string>
+    <string name="error_verificar">No se pudo comprobar la verificación: %1$s</string>
+    <string name="tu_correo">tu correo electrónico</string>
+    <string name="error_enviar_verificacion">La cuenta se creó, pero no se pudo enviar el correo de verificación. Reenvíalo desde la pantalla de verificación.</string>
+
     <!-- Registro -->
     <string name="crear_cuenta_titulo">Crear Cuenta</string>
     <string name="nombre">Nombre</string>
     <string name="apellido">Apellido</string>
     <string name="confirmar_contrasena">Confirmar Contraseña</string>
     <string name="registrar_usuario">Registrarme</string>
-    <string name="registro_exitoso">Usuario registrado con éxito</string>
+    <string name="registro_exitoso">Cuenta creada. Revisa tu correo para verificarla.</string>
     <string name="error_nombre">Escribe tu nombre</string>
     <string name="error_apellido">Escribe tu apellido</string>
     <string name="error_contrasena_corta">La contraseña debe tener al menos 6 caracteres</string>

@@ -38,15 +38,16 @@ npm ci
 npm run test:rules
 ```
 
-El resultado esperado es `22 passed`. El script arranca los emuladores en el
+El resultado esperado es `27 passed`. El script arranca los emuladores en el
 proyecto ficticio `demo-controldegastos`, ejecuta Vitest y los apaga al terminar.
 También se ejecuta en el trabajo `firebase-rules` de GitHub Actions.
 
 > Si el proyecto sigue en **modo de prueba**, cualquier persona con la API key
 > podría leer o escribir datos. Desplegar las reglas es el paso más importante.
 > Estado actual: las reglas de Firestore están publicadas y una lectura sin
-> autenticación devuelve `403 PERMISSION_DENIED`. Las de Storage quedan
-> pendientes hasta activar el plan Blaze.
+> autenticación devuelve `403 PERMISSION_DENIED`. La versión 1.2 añade la
+> exigencia de correo verificado, así que hay que volver a desplegarlas. Las de
+> Storage quedan pendientes hasta activar el plan Blaze.
 
 ### 1.2. Storage requiere Blaze
 
@@ -68,6 +69,38 @@ alerta avisa, no bloquea el gasto.
 
 Después de comprobar que todos los usuarios migraron a `usuarios/{uid}`, se puede
 eliminar la condición del email en `firestore.rules` y volver a desplegar.
+
+### 1.3. Verificación obligatoria del correo
+
+Desde la versión 1.2 la app solo deja usar los datos a las cuentas con el
+correo verificado:
+
+- Al registrarse, `Register` crea la cuenta y envía el correo de verificación.
+- `LoginActivity` no abre `MainActivity` mientras `isEmailVerified` sea falso:
+  muestra un panel con **Ya verifiqué mi correo** y **Reenviar correo**.
+- `firestore.rules` y `storage.rules` comprueban
+  `request.auth.token.email_verified == true`, así que un cliente modificado
+  tampoco puede leer ni escribir gastos, ingresos o recibos.
+- El documento de perfil se puede crear al registrarse (para guardar el
+  nombre); leerlo o modificarlo también exige verificación.
+
+Comprobaciones en Firebase Console:
+
+1. **Authentication → Templates → Email address verification**: plantilla
+   activada y remitente correcto. Firebase usa un remitente propio por defecto;
+   para usar un dominio propio hay que configurar SMTP.
+2. **Authentication → Settings → Authorized domains**: debe estar
+   `<proyecto>.firebaseapp.com`, que viene incluido por defecto.
+3. El enlace del correo se abre en el navegador y confirma la cuenta. Al volver
+   a la app, el panel comprueba el estado y deja entrar automáticamente.
+
+Las cuentas creadas antes de este cambio también deben verificar su correo. Si
+alguna se registró con un correo falso o con errores, hay que eliminarla desde
+**Authentication → Users** y crear una nueva; no hay forma de verificarla.
+
+> Firebase limita la cantidad de correos de verificación por cuenta. Evita
+> pulsar "Reenviar" varias veces seguidas; si aparece `TOO_MANY_REQUESTS`,
+> espera unos minutos.
 
 ## 2. Migración de datos antiguos
 

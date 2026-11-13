@@ -1,6 +1,5 @@
 package com.example.controldegastos.view
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -67,9 +66,6 @@ class Register : AppCompatActivity() {
                                 .build()
                         ).await()
                     }
-
-                    Toast.makeText(this@Register, R.string.registro_exitoso, Toast.LENGTH_LONG).show()
-                    irAMainActivity()
                 } catch (e: Exception) {
                     // Si no se pudo guardar el perfil, deshacemos la cuenta para
                     // que el usuario no quede autenticado sin datos.
@@ -77,7 +73,23 @@ class Register : AppCompatActivity() {
                         .onFailure { runCatching { auth.signOut() } }
                     Toast.makeText(this@Register, R.string.error_guardar_perfil, Toast.LENGTH_LONG)
                         .show()
+                    return@launch
                 }
+
+                // La cuenta queda creada, pero no se podrá usar hasta que el
+                // correo esté verificado. LoginActivity muestra el aviso.
+                try {
+                    usuario.sendEmailVerification().await()
+                    Toast.makeText(this@Register, R.string.registro_exitoso, Toast.LENGTH_LONG)
+                        .show()
+                } catch (e: Exception) {
+                    Toast.makeText(
+                        this@Register,
+                        R.string.error_enviar_verificacion,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                finish()
             } catch (e: FirebaseAuthException) {
                 mostrarErrorDeRegistro(e)
             } catch (e: Exception) {
@@ -142,14 +154,5 @@ class Register : AppCompatActivity() {
         binding.etEmail.isEnabled = !cargando
         binding.etContrasena.isEnabled = !cargando
         binding.etConfirmarContrasena.isEnabled = !cargando
-    }
-
-    private fun irAMainActivity() {
-        startActivity(
-            Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-        )
-        finish()
     }
 }

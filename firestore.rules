@@ -5,6 +5,9 @@ rules_version = '2';
 // Los datos viven bajo usuarios/{uid}. Se permite además el acceso a la ruta
 // antigua usuarios/{email} mientras el cliente migra los datos una sola vez.
 // Después de migrar todos los usuarios se puede eliminar la condición del email.
+//
+// Todo dato de la app exige que el correo esté verificado en Firebase Auth.
+// El perfil se puede crear durante el registro, antes de verificar el correo.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -13,17 +16,22 @@ service cloud.firestore {
         return request.auth != null;
       }
 
-      function esPropietario() {
+      // Firebase incluye email_verified en el token. Google siempre lo marca
+      // como verdadero; las cuentas de correo sólo después de abrir el enlace.
+      function correoVerificado() {
+        return autenticado() && request.auth.token.email_verified == true;
+      }
+
+      function esDueno() {
         return autenticado() && (
           request.auth.uid == usuarioId ||
-          (
-            request.auth.token.email != null &&
-            (
-              request.auth.token.email == usuarioId ||
-              request.auth.token.email.lower() == usuarioId
-            )
-          )
+          request.auth.token.get('email', '') == usuarioId ||
+          request.auth.token.get('email', '').lower() == usuarioId
         );
+      }
+
+      function esPropietario() {
+        return correoVerificado() && esDueno();
       }
 
       function montoValido() {
@@ -32,8 +40,10 @@ service cloud.firestore {
                request.resource.data.monto <= 1000000000;
       }
 
-      // Perfil del usuario.
-      allow read, write: if esPropietario();
+      // Perfil del usuario: se crea al registrarse aunque el correo aún no
+      // esté verificado; leerlo o modificarlo exige verificación.
+      allow read, update, delete: if esPropietario();
+      allow create: if esDueno();
 
       match /gastos/{gastoId} {
         allow read, delete: if esPropietario();
