@@ -135,6 +135,36 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Filtro entre gastos e ingresos -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/grupoTipo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardBalance"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFiltroGastos"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/filtro_gastos" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFiltroIngresos"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/filtro_ingresos" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
     <!-- Título de la sección de historial -->
     <TextView
             android:id="@+id/lblHistorial"
@@ -147,7 +177,7 @@
             android:textSize="18sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cardBalance" />
+            app:layout_constraintTop_toBottomOf="@id/grupoTipo" />
 
     <!-- Mensaje cuando no hay gastos -->
     <TextView
@@ -179,7 +209,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/lblHistorial"
-            tools:listitem="@layout/item_gasto" />
+            tools:listitem="@layout/item_movimiento" />
 
     <!-- Indicador de carga inicial -->
     <com.google.android.material.progressindicator.CircularProgressIndicator

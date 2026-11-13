@@ -65,7 +65,45 @@ class FirebaseGastosRepository(
         }
     }.getOrNull()
 
-    override suspend fun agregarGasto(gasto: Gasto, reciboUri: Uri?): Result<Gasto> = resultado {
+    override suspend fun agregarGasto(gasto: Gasto, reciboUri: Uri?): Result<Gasto> =
+        resultado { guardarGasto(gasto, reciboUri) }
+
+    override suspend fun actualizarGasto(gasto: Gasto, reciboUri: Uri?): Result<Gasto> =
+        resultado { guardarGasto(gasto, reciboUri) }
+
+    override suspend fun agregarIngreso(ingreso: Ingreso): Result<Unit> =
+        resultado { guardarIngreso(ingreso) }
+
+    override suspend fun actualizarIngreso(ingreso: Ingreso): Result<Unit> =
+        resultado { guardarIngreso(ingreso) }
+
+    override suspend fun eliminarGasto(gasto: Gasto): Result<Unit> = resultado {
+        val usuario = usuarioRef() ?: error("No hay una sesión activa")
+        usuario.collection("gastos")
+            .document(gasto.id)
+            .delete()
+            .await()
+
+        gasto.rutaReciboStorage?.takeIf { it.isNotBlank() }?.let { ruta ->
+            runCatching { storage.reference.child(ruta).delete().await() }
+        }
+    }
+
+    override suspend fun eliminarIngreso(ingreso: Ingreso): Result<Unit> = resultado {
+        val usuario = usuarioRef() ?: error("No hay una sesión activa")
+        usuario.collection("ingresos")
+            .document(ingreso.id)
+            .delete()
+            .await()
+    }
+
+    /**
+     * Crea o actualiza un gasto. Si se adjunta un recibo nuevo se sube con un
+     * nombre único; si la escritura falla se borra el archivo recién subido y el
+     * gasto anterior queda intacto. Al reemplazar un recibo se elimina el viejo
+     * solo después de guardar el documento.
+     */
+    private suspend fun guardarGasto(gasto: Gasto, reciboUri: Uri?): Gasto {
         val usuario = usuarioRef() ?: error("No hay una sesión activa")
         val uid = auth.currentUser?.uid ?: error("No hay una sesión activa")
 
@@ -74,8 +112,9 @@ class FirebaseGastosRepository(
 
         try {
             if (reciboUri != null) {
-                val reciboRef = storage.reference
-                    .child("usuarios/$uid/recibos/${gasto.id}.jpg")
+                val reciboRef = storage.reference.child(
+                    "usuarios/$uid/recibos/${gasto.id}-${System.currentTimeMillis()}.jpg"
+                )
                 reciboRef.putFile(reciboUri).await()
                 val url = reciboRef.downloadUrl.await().toString()
                 reciboSubido = reciboRef.path
@@ -89,7 +128,12 @@ class FirebaseGastosRepository(
                 .document(gasto.id)
                 .set(gastoFinal)
                 .await()
-            gastoFinal
+
+            val rutaAnterior = gasto.rutaReciboStorage
+            if (rutaAnterior != null && rutaAnterior != gastoFinal.rutaReciboStorage) {
+                runCatching { storage.reference.child(rutaAnterior).delete().await() }
+            }
+            return gastoFinal
         } catch (e: Exception) {
             // Si la escritura falla después de subir la foto, no dejamos huérfanos.
             reciboSubido?.let { ruta ->
@@ -99,24 +143,12 @@ class FirebaseGastosRepository(
         }
     }
 
-    override suspend fun agregarIngreso(ingreso: Ingreso): Result<Unit> = resultado {
+    private suspend fun guardarIngreso(ingreso: Ingreso) {
         val usuario = usuarioRef() ?: error("No hay una sesión activa")
         usuario.collection("ingresos")
             .document(ingreso.id)
             .set(ingreso)
             .await()
-    }
-
-    override suspend fun eliminarGasto(gasto: Gasto): Result<Unit> = resultado {
-        val usuario = usuarioRef() ?: error("No hay una sesión activa")
-        usuario.collection("gastos")
-            .document(gasto.id)
-            .delete()
-            .await()
-
-        gasto.rutaReciboStorage?.takeIf { it.isNotBlank() }?.let { ruta ->
-            runCatching { storage.reference.child(ruta).delete().await() }
-        }
     }
 
     /**

@@ -3,8 +3,10 @@
 
     <!-- Generales -->
     <string name="guardar">Guardar</string>
+    <string name="guardar_cambios">Guardar cambios</string>
     <string name="cancelar">Cancelar</string>
     <string name="eliminar">Eliminar</string>
+    <string name="editar">Editar</string>
     <string name="agregar">Agregar</string>
     <string name="salir">Salir</string>
     <string name="cerrar_sesion">Cerrar sesión</string>
@@ -58,21 +60,26 @@
     <string name="dinero_disponible">Dinero Disponible</string>
     <string name="presupuesto">Presupuesto</string>
     <string name="total_gastado">Total Gastado</string>
-    <string name="actividades_gastos">Actividades y Gastos</string>
+    <string name="formato_ingreso">+%1$s</string>
+    <string name="actividades_gastos">Gastos registrados</string>
+    <string name="actividades_ingresos">Ingresos registrados</string>
+    <string name="filtro_gastos">Gastos</string>
+    <string name="filtro_ingresos">Ingresos</string>
     <string name="agregar_gasto">Agregar nuevo gasto</string>
+    <string name="agregar_ingreso">Agregar nuevo ingreso</string>
     <string name="sin_gastos">Aún no hay gastos registrados.\nToca el botón + para agregar el primero.</string>
-    <string name="menu_registrar_titulo">¿Qué deseas registrar?</string>
-    <string name="menu_registrar_gasto">Registrar un Gasto (-)</string>
-    <string name="menu_registrar_ingreso">Registrar un Ingreso (+)</string>
+    <string name="sin_ingresos">Aún no hay ingresos registrados.\nToca el botón + para agregar el primero.</string>
     <string name="confirmar_cierre_sesion_mensaje">¿Seguro que deseas cerrar sesión?</string>
 
     <!-- Diálogo de gasto -->
     <string name="titulo_dialogo_gasto">Registrar Nuevo Gasto</string>
+    <string name="titulo_dialogo_editar_gasto">Editar Gasto</string>
     <string name="titulo_gasto">Título</string>
     <string name="monto">Monto</string>
     <string name="categoria">Categoría</string>
     <string name="adjuntar_recibo">Adjuntar foto del recibo</string>
     <string name="sin_recibo">Sin recibo adjunto</string>
+    <string name="recibo_actual">Recibo actual (adjunta otra foto para reemplazarlo)</string>
     <string name="recibo_cargado">Recibo cargado correctamente</string>
     <string name="gasto_guardado">Gasto guardado</string>
     <string name="error_titulo">Escribe un título para el gasto</string>
@@ -84,6 +91,7 @@
 
     <!-- Diálogo de ingreso -->
     <string name="titulo_dialogo_ingreso">Registrar Nuevo Ingreso</string>
+    <string name="titulo_dialogo_editar_ingreso">Editar Ingreso</string>
     <string name="concepto_ingreso">Concepto (Ej. Pago Quincena)</string>
     <string name="monto_ingreso">Monto Recibido</string>
     <string name="categoria_ingreso">Categoría de Ingreso</string>
@@ -91,15 +99,22 @@
 
     <!-- Mensajes de datos -->
     <string name="ingreso_guardado">Ingreso agregado al presupuesto</string>
+    <string name="gasto_actualizado">Gasto actualizado</string>
+    <string name="ingreso_actualizado">Ingreso actualizado</string>
     <string name="gasto_eliminado">Gasto eliminado</string>
+    <string name="ingreso_eliminado">Ingreso eliminado</string>
     <string name="error_guardar_gasto">No se pudo guardar el gasto</string>
     <string name="error_guardar_ingreso">No se pudo guardar el ingreso</string>
+    <string name="error_actualizar_gasto">No se pudo actualizar el gasto</string>
+    <string name="error_actualizar_ingreso">No se pudo actualizar el ingreso</string>
     <string name="error_eliminar_gasto">No se pudo eliminar el gasto</string>
+    <string name="error_eliminar_ingreso">No se pudo eliminar el ingreso</string>
     <string name="error_cargar_datos">No se pudieron cargar los datos. Revisa tu conexión.</string>
     <string name="error_abrir_recibo">No se pudo abrir el recibo</string>
     <string name="recibo_no_disponible">Este recibo no está disponible en este dispositivo</string>
 
     <!-- Eliminar -->
     <string name="eliminar_gasto">Eliminar gasto</string>
-    <string name="eliminar_gasto_mensaje">¿Deseas eliminar \"%1$s\"?</string>
+    <string name="eliminar_ingreso">Eliminar ingreso</string>
+    <string name="eliminar_movimiento_mensaje">¿Deseas eliminar \"%1$s\"?</string>
 </resources>

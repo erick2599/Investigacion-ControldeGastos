@@ -28,6 +28,7 @@ import com.example.controldegastos.model.Gasto
 import com.example.controldegastos.model.Ingreso
 import com.example.controldegastos.viewModel.GastosUiState
 import com.example.controldegastos.viewModel.GastosViewModel
+import com.example.controldegastos.viewModel.TipoMovimiento
 import com.example.controldegastos.viewModel.UiEvent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
@@ -37,7 +38,7 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var gastosAdapter: GastosAdapter
+    private lateinit var movimientosAdapter: MovimientosAdapter
     private val auth = FirebaseAuth.getInstance()
     private val viewModel: GastosViewModel by viewModels { GastosViewModel.Factory }
 
@@ -71,26 +72,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configurarLista() {
-        gastosAdapter = GastosAdapter(
+        movimientosAdapter = MovimientosAdapter(
+            onEditar = ::editarMovimiento,
             onEliminar = ::confirmarEliminacion,
             onReciboClick = ::abrirRecibo
         )
         binding.rvGastos.layoutManager = LinearLayoutManager(this)
-        binding.rvGastos.adapter = gastosAdapter
+        binding.rvGastos.adapter = movimientosAdapter
     }
 
     private fun configurarAcciones() {
-        binding.fabAgregarGasto.setOnClickListener {
-            val opciones = resources.getStringArray(R.array.opciones_registro)
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.menu_registrar_titulo)
-                .setItems(opciones) { _, posicion ->
-                    when (posicion) {
-                        0 -> mostrarDialogoAgregarGasto()
-                        1 -> mostrarDialogoAgregarIngreso()
-                    }
+        val tipoInicial = viewModel.uiState.value.tipoSeleccionado
+        binding.grupoTipo.check(
+            if (tipoInicial == TipoMovimiento.GASTO) {
+                R.id.btnFiltroGastos
+            } else {
+                R.id.btnFiltroIngresos
+            }
+        )
+        binding.grupoTipo.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            viewModel.cambiarTipo(
+                if (checkedId == R.id.btnFiltroGastos) {
+                    TipoMovimiento.GASTO
+                } else {
+                    TipoMovimiento.INGRESO
                 }
-                .show()
+            )
+        }
+
+        binding.fabAgregarGasto.setOnClickListener {
+            when (viewModel.uiState.value.tipoSeleccionado) {
+                TipoMovimiento.GASTO -> mostrarDialogoAgregarGasto()
+                TipoMovimiento.INGRESO -> mostrarDialogoAgregarIngreso()
+            }
         }
 
         binding.btnCerrarSesion.setOnClickListener { confirmarCierreSesion() }
@@ -118,9 +133,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderizar(estado: GastosUiState) {
+        val esGasto = estado.tipoSeleccionado == TipoMovimiento.GASTO
+        val movimientos: List<Movimiento> = if (esGasto) {
+            estado.gastos.map { Movimiento.GastoItem(it) }
+        } else {
+            estado.ingresos.map { Movimiento.IngresoItem(it) }
+        }
+
         binding.progressCargando.isVisible = estado.cargando
-        binding.txtVacio.isVisible = !estado.cargando && estado.gastos.isEmpty()
+        binding.txtVacio.isVisible = !estado.cargando && movimientos.isEmpty()
+        binding.txtVacio.text = getString(if (esGasto) R.string.sin_gastos else R.string.sin_ingresos)
+        binding.lblHistorial.text =
+            getString(if (esGasto) R.string.actividades_gastos else R.string.actividades_ingresos)
         binding.fabAgregarGasto.isEnabled = !estado.guardando
+        binding.fabAgregarGasto.contentDescription =
+            getString(if (esGasto) R.string.agregar_gasto else R.string.agregar_ingreso)
 
         binding.txtDineroDisponible.text = Dinero.formatear(estado.disponibleCentavos)
         binding.txtDineroDisponible.setTextColor(
@@ -132,28 +159,61 @@ class MainActivity : AppCompatActivity() {
         binding.txtPresupuesto.text = Dinero.formatear(estado.presupuestoCentavos)
         binding.txtTotalGastado.text = Dinero.formatear(estado.totalGastadoCentavos)
 
-        gastosAdapter.submitList(estado.gastos)
+        movimientosAdapter.submitList(movimientos)
     }
 
     private fun mostrarEvento(evento: UiEvent) {
         val mensaje = when (evento) {
             UiEvent.GastoGuardado -> R.string.gasto_guardado
             UiEvent.IngresoGuardado -> R.string.ingreso_guardado
+            UiEvent.GastoActualizado -> R.string.gasto_actualizado
+            UiEvent.IngresoActualizado -> R.string.ingreso_actualizado
             UiEvent.GastoEliminado -> R.string.gasto_eliminado
+            UiEvent.IngresoEliminado -> R.string.ingreso_eliminado
             UiEvent.ErrorGuardarGasto -> R.string.error_guardar_gasto
             UiEvent.ErrorGuardarIngreso -> R.string.error_guardar_ingreso
+            UiEvent.ErrorActualizarGasto -> R.string.error_actualizar_gasto
+            UiEvent.ErrorActualizarIngreso -> R.string.error_actualizar_ingreso
             UiEvent.ErrorEliminarGasto -> R.string.error_eliminar_gasto
+            UiEvent.ErrorEliminarIngreso -> R.string.error_eliminar_ingreso
             UiEvent.ErrorCargarDatos -> R.string.error_cargar_datos
         }
         Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show()
     }
 
-    private fun confirmarEliminacion(gasto: Gasto) {
+    private fun editarMovimiento(movimiento: Movimiento) {
+        when (movimiento) {
+            is Movimiento.GastoItem -> mostrarDialogoAgregarGasto(movimiento.gasto)
+            is Movimiento.IngresoItem -> mostrarDialogoAgregarIngreso(movimiento.ingreso)
+        }
+    }
+
+    private fun confirmarEliminacion(movimiento: Movimiento) {
+        when (movimiento) {
+            is Movimiento.GastoItem -> confirmarEliminacion(
+                tituloRes = R.string.eliminar_gasto,
+                nombre = movimiento.gasto.titulo,
+                alConfirmar = { viewModel.eliminarGasto(movimiento.gasto) }
+            )
+
+            is Movimiento.IngresoItem -> confirmarEliminacion(
+                tituloRes = R.string.eliminar_ingreso,
+                nombre = movimiento.ingreso.concepto,
+                alConfirmar = { viewModel.eliminarIngreso(movimiento.ingreso) }
+            )
+        }
+    }
+
+    private fun confirmarEliminacion(
+        tituloRes: Int,
+        nombre: String,
+        alConfirmar: () -> Unit
+    ) {
         MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.eliminar_gasto)
-            .setMessage(getString(R.string.eliminar_gasto_mensaje, gasto.titulo))
+            .setTitle(tituloRes)
+            .setMessage(getString(R.string.eliminar_movimiento_mensaje, nombre))
             .setNegativeButton(R.string.cancelar, null)
-            .setPositiveButton(R.string.eliminar) { _, _ -> viewModel.eliminarGasto(gasto) }
+            .setPositiveButton(R.string.eliminar) { _, _ -> alConfirmar() }
             .show()
     }
 
@@ -178,7 +238,7 @@ class MainActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun mostrarDialogoAgregarGasto() {
+    private fun mostrarDialogoAgregarGasto(gastoExistente: Gasto? = null) {
         uriReciboSeleccionado = null
         val dialogo = DialogAgregarGastoBinding.inflate(layoutInflater)
 
@@ -188,10 +248,31 @@ class MainActivity : AppCompatActivity() {
         )
 
         val alertDialog = MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.titulo_dialogo_gasto)
+            .setTitle(
+                if (gastoExistente == null) {
+                    R.string.titulo_dialogo_gasto
+                } else {
+                    R.string.titulo_dialogo_editar_gasto
+                }
+            )
             .setView(dialogo.root)
             .setCancelable(false)
             .create()
+
+        dialogo.btnGuardar.setText(
+            if (gastoExistente == null) R.string.guardar else R.string.guardar_cambios
+        )
+
+        gastoExistente?.let { gasto ->
+            dialogo.etTitulo.setText(gasto.titulo)
+            dialogo.etMonto.setText(montoEditable(gasto.monto))
+            dialogo.spCategoria.setText(gasto.categoriaLaboral, false)
+            dialogo.txtReciboSeleccionado.text = if (!gasto.rutaFotoRecibo.isNullOrBlank()) {
+                getString(R.string.recibo_actual)
+            } else {
+                getString(R.string.sin_recibo)
+            }
+        }
 
         actualizarTextoRecibo = { texto -> dialogo.txtReciboSeleccionado.text = texto }
 
@@ -211,6 +292,7 @@ class MainActivity : AppCompatActivity() {
 
         dialogo.btnCancelar.setOnClickListener {
             actualizarTextoRecibo = null
+            uriReciboSeleccionado = null
             alertDialog.dismiss()
         }
 
@@ -228,17 +310,21 @@ class MainActivity : AppCompatActivity() {
             val monto = Validador.parsearMonto(montoTexto) ?: return@setOnClickListener
             val sello = Fechas.ahora()
             val gasto = Gasto(
-                id = UUID.randomUUID().toString(),
+                id = gastoExistente?.id ?: UUID.randomUUID().toString(),
                 titulo = titulo,
                 monto = monto,
                 categoriaLaboral = categoria,
-                fecha = sello.texto,
-                fechaMillis = sello.millis,
-                rutaFotoRecibo = null,
-                rutaReciboStorage = null
+                fecha = gastoExistente?.fecha ?: sello.texto,
+                fechaMillis = gastoExistente?.fechaMillis ?: sello.millis,
+                rutaFotoRecibo = gastoExistente?.rutaFotoRecibo,
+                rutaReciboStorage = gastoExistente?.rutaReciboStorage
             )
 
-            viewModel.agregarGasto(gasto, uriReciboSeleccionado)
+            if (gastoExistente == null) {
+                viewModel.agregarGasto(gasto, uriReciboSeleccionado)
+            } else {
+                viewModel.actualizarGasto(gasto, uriReciboSeleccionado)
+            }
             uriReciboSeleccionado = null
             actualizarTextoRecibo = null
             alertDialog.dismiss()
@@ -268,7 +354,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun mostrarDialogoAgregarIngreso() {
+    private fun mostrarDialogoAgregarIngreso(ingresoExistente: Ingreso? = null) {
         val dialogo = DialogAgregarIngresoBinding.inflate(layoutInflater)
 
         val categorias = resources.getStringArray(R.array.categorias_ingreso)
@@ -277,10 +363,26 @@ class MainActivity : AppCompatActivity() {
         )
 
         val alertDialog = MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.titulo_dialogo_ingreso)
+            .setTitle(
+                if (ingresoExistente == null) {
+                    R.string.titulo_dialogo_ingreso
+                } else {
+                    R.string.titulo_dialogo_editar_ingreso
+                }
+            )
             .setView(dialogo.root)
             .setCancelable(false)
             .create()
+
+        dialogo.btnGuardarIngreso.setText(
+            if (ingresoExistente == null) R.string.agregar else R.string.guardar_cambios
+        )
+
+        ingresoExistente?.let { ingreso ->
+            dialogo.etConceptoIngreso.setText(ingreso.concepto)
+            dialogo.etMontoIngreso.setText(montoEditable(ingreso.monto))
+            dialogo.spCategoriaIngreso.setText(ingreso.categoria, false)
+        }
 
         dialogo.etConceptoIngreso.doAfterTextChanged {
             dialogo.tilConceptoIngreso.error = null
@@ -310,15 +412,19 @@ class MainActivity : AppCompatActivity() {
             val monto = Validador.parsearMonto(montoTexto) ?: return@setOnClickListener
             val sello = Fechas.ahora()
             val ingreso = Ingreso(
-                id = UUID.randomUUID().toString(),
+                id = ingresoExistente?.id ?: UUID.randomUUID().toString(),
                 concepto = concepto,
                 monto = monto,
                 categoria = categoria,
-                fecha = sello.texto,
-                fechaMillis = sello.millis
+                fecha = ingresoExistente?.fecha ?: sello.texto,
+                fechaMillis = ingresoExistente?.fechaMillis ?: sello.millis
             )
 
-            viewModel.agregarIngreso(ingreso)
+            if (ingresoExistente == null) {
+                viewModel.agregarIngreso(ingreso)
+            } else {
+                viewModel.actualizarIngreso(ingreso)
+            }
             alertDialog.dismiss()
         }
 
@@ -363,6 +469,9 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, R.string.error_abrir_recibo, Toast.LENGTH_SHORT).show()
             }
     }
+
+    private fun montoEditable(monto: Double): String =
+        Dinero.deCentavos(Dinero.aCentavos(monto)).stripTrailingZeros().toPlainString()
 
     override fun onDestroy() {
         actualizarTextoRecibo = null

@@ -25,9 +25,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class TipoMovimiento { GASTO, INGRESO }
+
 data class GastosUiState(
     val presupuestoCentavos: Long = 0L,
     val gastos: List<Gasto> = emptyList(),
+    val ingresos: List<Ingreso> = emptyList(),
+    val tipoSeleccionado: TipoMovimiento = TipoMovimiento.GASTO,
     val totalGastadoCentavos: Long = 0L,
     val disponibleCentavos: Long = 0L,
     val cargando: Boolean = false,
@@ -37,10 +41,16 @@ data class GastosUiState(
 sealed interface UiEvent {
     data object GastoGuardado : UiEvent
     data object IngresoGuardado : UiEvent
+    data object GastoActualizado : UiEvent
+    data object IngresoActualizado : UiEvent
     data object GastoEliminado : UiEvent
+    data object IngresoEliminado : UiEvent
     data object ErrorGuardarGasto : UiEvent
     data object ErrorGuardarIngreso : UiEvent
+    data object ErrorActualizarGasto : UiEvent
+    data object ErrorActualizarIngreso : UiEvent
     data object ErrorEliminarGasto : UiEvent
+    data object ErrorEliminarIngreso : UiEvent
     data object ErrorCargarDatos : UiEvent
 }
 
@@ -55,15 +65,20 @@ class GastosViewModel(
     private val _nombreUsuario = MutableStateFlow<String?>(null)
     val nombreUsuario: StateFlow<String?> = _nombreUsuario
 
+    private val _tipoSeleccionado = MutableStateFlow(TipoMovimiento.GASTO)
+
     val uiState: StateFlow<GastosUiState> = combine(
         repositorio.observarGastos().conManejoDeError(),
         repositorio.observarIngresos().conManejoDeError(),
-        _guardando
-    ) { gastos, ingresos, guardando ->
+        _guardando,
+        _tipoSeleccionado
+    ) { gastos, ingresos, guardando, tipoSeleccionado ->
         val balance = BalanceCalculator.calcular(gastos, ingresos)
         GastosUiState(
             presupuestoCentavos = balance.presupuestoCentavos,
             gastos = gastos,
+            ingresos = ingresos,
+            tipoSeleccionado = tipoSeleccionado,
             totalGastadoCentavos = balance.totalGastadoCentavos,
             disponibleCentavos = balance.disponibleCentavos,
             cargando = false,
@@ -95,6 +110,17 @@ class GastosViewModel(
         }
     }
 
+    fun actualizarGasto(gasto: Gasto, reciboUri: Uri?) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.actualizarGasto(gasto, reciboUri)
+                .onSuccess { _eventos.emit(UiEvent.GastoActualizado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorActualizarGasto) }
+            _guardando.value = false
+        }
+    }
+
     fun agregarIngreso(ingreso: Ingreso) {
         if (_guardando.value) return
         viewModelScope.launch {
@@ -102,6 +128,17 @@ class GastosViewModel(
             repositorio.agregarIngreso(ingreso)
                 .onSuccess { _eventos.emit(UiEvent.IngresoGuardado) }
                 .onFailure { _eventos.emit(UiEvent.ErrorGuardarIngreso) }
+            _guardando.value = false
+        }
+    }
+
+    fun actualizarIngreso(ingreso: Ingreso) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.actualizarIngreso(ingreso)
+                .onSuccess { _eventos.emit(UiEvent.IngresoActualizado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorActualizarIngreso) }
             _guardando.value = false
         }
     }
@@ -115,6 +152,21 @@ class GastosViewModel(
                 .onFailure { _eventos.emit(UiEvent.ErrorEliminarGasto) }
             _guardando.value = false
         }
+    }
+
+    fun eliminarIngreso(ingreso: Ingreso) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.eliminarIngreso(ingreso)
+                .onSuccess { _eventos.emit(UiEvent.IngresoEliminado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorEliminarIngreso) }
+            _guardando.value = false
+        }
+    }
+
+    fun cambiarTipo(tipo: TipoMovimiento) {
+        _tipoSeleccionado.value = tipo
     }
 
     private fun <T> Flow<List<T>>.conManejoDeError(): Flow<List<T>> = catch { error ->

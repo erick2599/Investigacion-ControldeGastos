@@ -19,8 +19,4 @@
         <item>Otros ingresos</item>
     </string-array>
 
-    <string-array name="opciones_registro">
-        <item>@string/menu_registrar_gasto</item>
-        <item>@string/menu_registrar_ingreso</item>
-    </string-array>
 </resources>

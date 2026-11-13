@@ -19,9 +19,15 @@ interface GastosRepository {
 
     suspend fun agregarGasto(gasto: Gasto, reciboUri: Uri?): Result<Gasto>
 
+    suspend fun actualizarGasto(gasto: Gasto, reciboUri: Uri?): Result<Gasto>
+
     suspend fun agregarIngreso(ingreso: Ingreso): Result<Unit>
 
+    suspend fun actualizarIngreso(ingreso: Ingreso): Result<Unit>
+
     suspend fun eliminarGasto(gasto: Gasto): Result<Unit>
+
+    suspend fun eliminarIngreso(ingreso: Ingreso): Result<Unit>
 
     /** Copia los datos antiguos guardados por email a la ruta segura por UID. */
     suspend fun migrarDatosLegacy(): Result<Unit>

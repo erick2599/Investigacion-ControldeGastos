@@ -111,6 +111,68 @@ class GastosViewModelTest {
     }
 
     @Test
+    fun `emite evento al actualizar un gasto`() = runTest {
+        val eventos = mutableListOf<UiEvent>()
+        val gasto = Gasto(id = "g1", titulo = "Café", monto = 3.0)
+        val viewModel = GastosViewModel(repositorio)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.eventos.collect { eventos.add(it) }
+        }
+
+        viewModel.actualizarGasto(gasto, null)
+        advanceUntilIdle()
+
+        assertEquals(listOf(UiEvent.GastoActualizado), eventos)
+        assertEquals(listOf(gasto), repositorio.gastosActualizados)
+    }
+
+    @Test
+    fun `emite evento al actualizar un ingreso`() = runTest {
+        val eventos = mutableListOf<UiEvent>()
+        val ingreso = Ingreso(id = "i1", concepto = "Quincena", monto = 500.0)
+        val viewModel = GastosViewModel(repositorio)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.eventos.collect { eventos.add(it) }
+        }
+
+        viewModel.actualizarIngreso(ingreso)
+        advanceUntilIdle()
+
+        assertEquals(listOf(UiEvent.IngresoActualizado), eventos)
+        assertEquals(listOf(ingreso), repositorio.ingresosActualizados)
+    }
+
+    @Test
+    fun `emite evento al eliminar un ingreso`() = runTest {
+        val eventos = mutableListOf<UiEvent>()
+        val ingreso = Ingreso(id = "i1", concepto = "Quincena", monto = 500.0)
+        val viewModel = GastosViewModel(repositorio)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.eventos.collect { eventos.add(it) }
+        }
+
+        viewModel.eliminarIngreso(ingreso)
+        advanceUntilIdle()
+
+        assertEquals(listOf(UiEvent.IngresoEliminado), eventos)
+        assertEquals(listOf(ingreso), repositorio.ingresosEliminados)
+    }
+
+    @Test
+    fun `cambia el tipo de movimiento seleccionado`() = runTest {
+        val viewModel = GastosViewModel(repositorio)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect { }
+        }
+        advanceUntilIdle()
+
+        viewModel.cambiarTipo(TipoMovimiento.INGRESO)
+        advanceUntilIdle()
+
+        assertEquals(TipoMovimiento.INGRESO, viewModel.uiState.value.tipoSeleccionado)
+    }
+
+    @Test
     fun `carga el nombre del usuario y migra datos antiguos al iniciar`() = runTest {
         val viewModel = GastosViewModel(repositorio)
         advanceUntilIdle()
@@ -124,8 +186,11 @@ class GastosViewModelTest {
         val gastosFlow = MutableStateFlow<List<Gasto>>(emptyList())
         val ingresosFlow = MutableStateFlow<List<Ingreso>>(emptyList())
         val gastosGuardados = mutableListOf<Gasto>()
+        val gastosActualizados = mutableListOf<Gasto>()
         val ingresosGuardados = mutableListOf<Ingreso>()
+        val ingresosActualizados = mutableListOf<Ingreso>()
         val gastosEliminados = mutableListOf<Gasto>()
+        val ingresosEliminados = mutableListOf<Ingreso>()
         var fallarEscritura = false
         var migracionEjecutada = false
         var nombreUsuario: String? = "Ana"
@@ -143,6 +208,13 @@ class GastosViewModelTest {
             return Result.success(gasto)
         }
 
+        override suspend fun actualizarGasto(gasto: Gasto, reciboUri: Uri?): Result<Gasto> {
+            if (fallarEscritura) return Result.failure(IllegalStateException("fallo simulado"))
+            gastosActualizados += gasto
+            gastosFlow.value = gastosFlow.value.map { if (it.id == gasto.id) gasto else it }
+            return Result.success(gasto)
+        }
+
         override suspend fun agregarIngreso(ingreso: Ingreso): Result<Unit> {
             if (fallarEscritura) return Result.failure(IllegalStateException("fallo simulado"))
             ingresosGuardados += ingreso
@@ -150,10 +222,24 @@ class GastosViewModelTest {
             return Result.success(Unit)
         }
 
+        override suspend fun actualizarIngreso(ingreso: Ingreso): Result<Unit> {
+            if (fallarEscritura) return Result.failure(IllegalStateException("fallo simulado"))
+            ingresosActualizados += ingreso
+            ingresosFlow.value = ingresosFlow.value.map { if (it.id == ingreso.id) ingreso else it }
+            return Result.success(Unit)
+        }
+
         override suspend fun eliminarGasto(gasto: Gasto): Result<Unit> {
             if (fallarEscritura) return Result.failure(IllegalStateException("fallo simulado"))
             gastosEliminados += gasto
             gastosFlow.value = gastosFlow.value.filterNot { it.id == gasto.id }
+            return Result.success(Unit)
+        }
+
+        override suspend fun eliminarIngreso(ingreso: Ingreso): Result<Unit> {
+            if (fallarEscritura) return Result.failure(IllegalStateException("fallo simulado"))
+            ingresosEliminados += ingreso
+            ingresosFlow.value = ingresosFlow.value.filterNot { it.id == ingreso.id }
             return Result.success(Unit)
         }
 
