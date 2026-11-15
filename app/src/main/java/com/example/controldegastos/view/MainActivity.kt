@@ -3,7 +3,9 @@ package com.example.controldegastos.view
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -239,6 +241,31 @@ class MainActivity : AppCompatActivity() {
         finish()
     }
 
+    /**
+     * Muestra el menú de categorías sin el teclado en pantalla.
+     *
+     * Con el teclado abierto la ventana del diálogo se encoge y el desplegable
+     * no tiene espacio suficiente: las últimas categorías quedan ocultas y no
+     * se pueden elegir. Al cerrar el teclado primero, el menú se despliega
+     * completo hacia arriba o hacia abajo según el espacio disponible.
+     */
+    private fun desplegarCategorias(campo: AutoCompleteTextView) {
+        val teclado = getSystemService(InputMethodManager::class.java)
+        val enfocado = campo.rootView.findFocus()
+
+        if (enfocado != null && enfocado !== campo) {
+            teclado?.hideSoftInputFromWindow(enfocado.windowToken, 0)
+            enfocado.clearFocus()
+        } else {
+            teclado?.hideSoftInputFromWindow(campo.windowToken, 0)
+        }
+
+        // Se espera a que la ventana recupere su tamaño antes de desplegar.
+        campo.postDelayed({
+            if (campo.isAttachedToWindow) campo.showDropDown()
+        }, 150L)
+    }
+
     private fun mostrarDialogoAgregarGasto(gastoExistente: Gasto? = null) {
         uriReciboSeleccionado = null
         val dialogo = DialogAgregarGastoBinding.inflate(layoutInflater)
@@ -289,7 +316,12 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        dialogo.spCategoria.setOnClickListener { dialogo.spCategoria.showDropDown() }
+        dialogo.spCategoria.setOnClickListener {
+            desplegarCategorias(dialogo.spCategoria)
+        }
+        dialogo.tilCategoria.setEndIconOnClickListener {
+            desplegarCategorias(dialogo.spCategoria)
+        }
 
         dialogo.btnCancelar.setOnClickListener {
             actualizarTextoRecibo = null
@@ -396,7 +428,10 @@ class MainActivity : AppCompatActivity() {
         dialogo.btnCancelarIngreso.setOnClickListener { alertDialog.dismiss() }
 
         dialogo.spCategoriaIngreso.setOnClickListener {
-            dialogo.spCategoriaIngreso.showDropDown()
+            desplegarCategorias(dialogo.spCategoriaIngreso)
+        }
+        dialogo.tilCategoriaIngreso.setEndIconOnClickListener {
+            desplegarCategorias(dialogo.spCategoriaIngreso)
         }
 
         dialogo.btnGuardarIngreso.setOnClickListener {

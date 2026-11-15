@@ -59,6 +59,7 @@
     <string name="apellido">Apellido</string>
     <string name="confirmar_contrasena">Confirmar Contraseña</string>
     <string name="registrar_usuario">Registrarme</string>
+    <string name="volver_al_login">¿Ya tienes cuenta? Inicia sesión</string>
     <string name="registro_exitoso">Cuenta creada. Revisa tu correo para verificarla.</string>
     <string name="error_nombre">Escribe tu nombre</string>
     <string name="error_apellido">Escribe tu apellido</string>

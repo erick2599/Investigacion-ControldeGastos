@@ -127,5 +127,14 @@
             app:indicatorColor="@color/verde_primario"
             tools:visibility="visible" />
 
+        <Button
+            android:id="@+id/btnVolverLogin"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/volver_al_login"
+            android:textColor="@color/verde_primario" />
+
     </LinearLayout>
 </ScrollView>

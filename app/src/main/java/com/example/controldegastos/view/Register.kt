@@ -37,6 +37,9 @@ class Register : AppCompatActivity() {
         }
 
         binding.btnRegistrar.setOnClickListener { registrarUsuario() }
+
+        // Vuelve a la pantalla de inicio de sesión sin crear la cuenta.
+        binding.btnVolverLogin.setOnClickListener { finish() }
     }
 
     private fun registrarUsuario() {
@@ -149,6 +152,7 @@ class Register : AppCompatActivity() {
     private fun setCargando(cargando: Boolean) {
         binding.progressRegistro.isVisible = cargando
         binding.btnRegistrar.isEnabled = !cargando
+        binding.btnVolverLogin.isEnabled = !cargando
         binding.etNombre.isEnabled = !cargando
         binding.etApellido.isEnabled = !cargando
         binding.etEmail.isEnabled = !cargando
