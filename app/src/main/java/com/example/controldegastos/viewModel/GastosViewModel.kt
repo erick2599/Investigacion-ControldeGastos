@@ -1,36 +1,188 @@
 package com.example.controldegastos.viewModel
 
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.controldegastos.data.FirebaseGastosRepository
+import com.example.controldegastos.data.GastosRepository
+import com.example.controldegastos.domain.BalanceCalculator
 import com.example.controldegastos.model.Gasto
-import kotlinx.flow.MutableStateFlow
-import kotlinx.flow.StateFlow
+import com.example.controldegastos.model.Ingreso
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
+enum class TipoMovimiento { GASTO, INGRESO }
 
+data class GastosUiState(
+    val presupuestoCentavos: Long = 0L,
+    val gastos: List<Gasto> = emptyList(),
+    val ingresos: List<Ingreso> = emptyList(),
+    val tipoSeleccionado: TipoMovimiento = TipoMovimiento.GASTO,
+    val totalGastadoCentavos: Long = 0L,
+    val disponibleCentavos: Long = 0L,
+    val cargando: Boolean = false,
+    val guardando: Boolean = false
+)
 
-class GastosViewModel : ViewModel() {
+sealed interface UiEvent {
+    data object GastoGuardado : UiEvent
+    data object IngresoGuardado : UiEvent
+    data object GastoActualizado : UiEvent
+    data object IngresoActualizado : UiEvent
+    data object GastoEliminado : UiEvent
+    data object IngresoEliminado : UiEvent
+    data object ErrorGuardarGasto : UiEvent
+    data object ErrorGuardarIngreso : UiEvent
+    data object ErrorActualizarGasto : UiEvent
+    data object ErrorActualizarIngreso : UiEvent
+    data object ErrorEliminarGasto : UiEvent
+    data object ErrorEliminarIngreso : UiEvent
+    data object ErrorCargarDatos : UiEvent
+}
 
-    // Asignamos un presupuesto base temporal para pruebas (puedes cambiarlo después)
-    private val _presupuestoInicial = MutableStateFlow(1200.0)
-    val presupuestoInicial: StateFlow<Double> = _presupuestoInicial
+class GastosViewModel(
+    private val repositorio: GastosRepository
+) : ViewModel() {
 
-    // Lista reactiva que contendrá los gastos que el usuario registre
-    private val _listaGastos = MutableStateFlow<List<Gasto>>(emptyList())
-    val listaGastos: StateFlow<List<Gasto>> = _listaGastos
+    private val _guardando = MutableStateFlow(false)
+    private val _eventos = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
+    val eventos: SharedFlow<UiEvent> = _eventos.asSharedFlow()
 
-    // Añade un nuevo gasto a la lista existente
-    fun agregarGasto(gasto: Gasto) {
-        val listaActual = _listaGastos.value.toMutableList()
-        listaActual.add(gasto)
-        _listaGastos.value = listaActual
+    private val _nombreUsuario = MutableStateFlow<String?>(null)
+    val nombreUsuario: StateFlow<String?> = _nombreUsuario
+
+    private val _tipoSeleccionado = MutableStateFlow(TipoMovimiento.GASTO)
+
+    val uiState: StateFlow<GastosUiState> = combine(
+        repositorio.observarGastos().conManejoDeError(),
+        repositorio.observarIngresos().conManejoDeError(),
+        _guardando,
+        _tipoSeleccionado
+    ) { gastos, ingresos, guardando, tipoSeleccionado ->
+        val balance = BalanceCalculator.calcular(gastos, ingresos)
+        GastosUiState(
+            presupuestoCentavos = balance.presupuestoCentavos,
+            gastos = gastos,
+            ingresos = ingresos,
+            tipoSeleccionado = tipoSeleccionado,
+            totalGastadoCentavos = balance.totalGastadoCentavos,
+            disponibleCentavos = balance.disponibleCentavos,
+            cargando = false,
+            guardando = guardando
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = GastosUiState(cargando = true)
+    )
+
+    init {
+        viewModelScope.launch {
+            repositorio.migrarDatosLegacy().onFailure {
+                Log.w(TAG, "No se pudo migrar la ruta antigua por email", it)
+            }
+            _nombreUsuario.value = repositorio.obtenerNombreUsuario()
+        }
     }
 
-    // Suma todos los montos acumulados
-    fun obtenerTotalGastado(): Double {
-        return _listaGastos.value.sumOf { it.monto }
+    fun agregarGasto(gasto: Gasto, reciboUri: Uri?) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.agregarGasto(gasto, reciboUri)
+                .onSuccess { _eventos.emit(UiEvent.GastoGuardado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorGuardarGasto) }
+            _guardando.value = false
+        }
     }
 
-    // Resta el dinero gastado del presupuesto original de la actividad laboral
-    fun obtenerDineroDisponible(): Double {
-        return _presupuestoInicial.value - obtenerTotalGastado()
+    fun actualizarGasto(gasto: Gasto, reciboUri: Uri?) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.actualizarGasto(gasto, reciboUri)
+                .onSuccess { _eventos.emit(UiEvent.GastoActualizado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorActualizarGasto) }
+            _guardando.value = false
+        }
+    }
+
+    fun agregarIngreso(ingreso: Ingreso) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.agregarIngreso(ingreso)
+                .onSuccess { _eventos.emit(UiEvent.IngresoGuardado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorGuardarIngreso) }
+            _guardando.value = false
+        }
+    }
+
+    fun actualizarIngreso(ingreso: Ingreso) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.actualizarIngreso(ingreso)
+                .onSuccess { _eventos.emit(UiEvent.IngresoActualizado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorActualizarIngreso) }
+            _guardando.value = false
+        }
+    }
+
+    fun eliminarGasto(gasto: Gasto) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.eliminarGasto(gasto)
+                .onSuccess { _eventos.emit(UiEvent.GastoEliminado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorEliminarGasto) }
+            _guardando.value = false
+        }
+    }
+
+    fun eliminarIngreso(ingreso: Ingreso) {
+        if (_guardando.value) return
+        viewModelScope.launch {
+            _guardando.value = true
+            repositorio.eliminarIngreso(ingreso)
+                .onSuccess { _eventos.emit(UiEvent.IngresoEliminado) }
+                .onFailure { _eventos.emit(UiEvent.ErrorEliminarIngreso) }
+            _guardando.value = false
+        }
+    }
+
+    fun cambiarTipo(tipo: TipoMovimiento) {
+        _tipoSeleccionado.value = tipo
+    }
+
+    private fun <T> Flow<List<T>>.conManejoDeError(): Flow<List<T>> = catch { error ->
+        if (error is CancellationException) throw error
+        Log.e(TAG, "No se pudieron cargar los datos", error)
+        _eventos.tryEmit(UiEvent.ErrorCargarDatos)
+        emit(emptyList())
+    }
+
+    companion object {
+        private const val TAG = "GastosViewModel"
+
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                GastosViewModel(FirebaseGastosRepository())
+            }
+        }
     }
 }

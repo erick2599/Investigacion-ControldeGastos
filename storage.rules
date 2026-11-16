@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// Los recibos se guardan en usuarios/{uid}/recibos/{archivo}.
+// Solo el propietario con el correo verificado puede leerlos, subirlos o
+// reemplazarlos, y deben ser imágenes menores a 5 MB.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /usuarios/{uid}/recibos/{archivo} {
+      allow read, delete: if request.auth != null &&
+        request.auth.uid == uid &&
+        request.auth.token.email_verified == true;
+
+      allow create, update: if request.auth != null &&
+        request.auth.uid == uid &&
+        request.auth.token.email_verified == true &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType != null &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

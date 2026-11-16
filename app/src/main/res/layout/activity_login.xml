@@ -1,79 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://android.com"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="24dp"
+        android:layout_height="wrap_content"
         android:gravity="center"
-        android:background="#F5F5F5">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@android:drawable/ic_lock_lock"
-            app:tint="#2E7D32"
-            android:layout_marginBottom="24dp"/>
-
-    <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Control de Gastos Laborales"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:layout_marginBottom="32dp"/>
-
-    <!-- Campo Correo -->
-    <com.google.android.material.textfield.TextInputLayout
+        <!-- Formulario de inicio de sesión -->
+        <LinearLayout
+            android:id="@+id/panelLogin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Correo Electrónico"
-            android:layout_marginBottom="16dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            android:gravity="center"
+            android:orientation="vertical">
 
-        <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEmail"
+            <ImageView
+                android:layout_width="88dp"
+                android:layout_height="88dp"
+                android:layout_marginBottom="20dp"
+                android:contentDescription="@string/app_name"
+                android:src="@android:drawable/ic_lock_lock"
+                app:tint="@color/verde_primario" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                android:text="@string/login_titulo"
+                android:textColor="@color/texto_principal"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilEmail"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textEmailAddress"/>
-    </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="16dp"
+                android:hint="@string/correo_electronico">
 
-    <!-- Campo Contraseña -->
-    <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Contraseña"
-            android:layout_marginBottom="24dp"
-            app:passwordToggleEnabled="true"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="emailAddress"
+                    android:inputType="textEmailAddress"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPassword"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilPassword"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textPassword"/>
-    </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="8dp"
+                android:hint="@string/contrasena"
+                app:endIconMode="password_toggle">
 
-    <!-- Botones -->
-    <Button
-            android:id="@+id/btnLogin"
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="password"
+                    android:inputType="textPassword"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:id="@+id/tvOlvideContrasena"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginBottom="16dp"
+                android:padding="8dp"
+                android:text="@string/olvide_contrasena"
+                android:textColor="@color/verde_primario" />
+
+            <Button
+                android:id="@+id/btnLogin"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/iniciar_sesion"
+                android:textSize="16sp"
+                app:backgroundTint="@color/verde_primario" />
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progressLogin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:indeterminate="true"
+                android:visibility="gone"
+                app:indicatorColor="@color/verde_primario"
+                tools:visibility="visible" />
+
+            <Button
+                android:id="@+id/btnRegister"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/crear_cuenta"
+                android:textColor="@color/verde_primario"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btnGoogleLogin"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/iniciar_sesion_google"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </LinearLayout>
+
+        <!-- Aviso de verificación de correo -->
+        <LinearLayout
+            android:id="@+id/panelVerificacion"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Iniciar Sesión"
-            android:backgroundTint="#2E7D32"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:layout_marginBottom="12dp"/>
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
 
-    <Button
-            android:id="@+id/btnRegister"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Crear Cuenta Nueva"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:textColor="#2E7D32"
-            android:textSize="14sp"/>
+            <ImageView
+                android:layout_width="88dp"
+                android:layout_height="88dp"
+                android:layout_marginBottom="20dp"
+                android:importantForAccessibility="no"
+                android:src="@android:drawable/ic_dialog_email"
+                app:tint="@color/verde_primario" />
 
-</LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/verificacion_titulo"
+                android:textColor="@color/texto_principal"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtVerificacionMensaje"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:gravity="center"
+                android:textColor="@color/texto_secundario"
+                android:textSize="15sp"
+                tools:text="Enviamos un enlace de verificación a correo@ejemplo.com." />
+
+            <Button
+                android:id="@+id/btnYaVerifique"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/ya_verifique"
+                android:textSize="16sp"
+                app:backgroundTint="@color/verde_primario" />
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progressVerificacion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp"
+                android:indeterminate="true"
+                android:visibility="gone"
+                app:indicatorColor="@color/verde_primario" />
+
+            <Button
+                android:id="@+id/btnReenviarVerificacion"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/reenviar_correo"
+                android:textColor="@color/verde_primario" />
+
+            <Button
+                android:id="@+id/btnCerrarSesionVerificacion"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/usar_otra_cuenta"
+                android:textColor="@color/texto_secundario" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

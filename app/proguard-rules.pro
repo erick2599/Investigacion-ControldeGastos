@@ -1,21 +1,18 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Reglas de R8/ProGuard para Control de Gastos.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Firestore usa reflexión para convertir documentos a los modelos. Necesita el
+# constructor sin argumentos y los getters públicos, que son los que definen las
+# propiedades (`getTitulo` -> "titulo"). Si R8 los renombra, `toObject` falla con
+# "No properties to serialize found". Por eso se conserva la clase completa.
+-keepattributes Signature
+-keep class com.example.controldegastos.model.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Conservar anotaciones de Firestore (@PropertyName, @Exclude, etc.).
+-keepattributes *Annotation*
+-keepclassmembers,allowobfuscation class * {
+    @com.google.firebase.firestore.PropertyName <fields>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Mantener la información de línea para reportes de fallos.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
