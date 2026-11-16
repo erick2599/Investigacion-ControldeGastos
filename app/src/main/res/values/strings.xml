@@ -1,47 +1,135 @@
 <resources>
     <string name="app_name">ControlDeGastos</string>
 
+    <!-- Generales -->
+    <string name="guardar">Guardar</string>
+    <string name="guardar_cambios">Guardar cambios</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="eliminar">Eliminar</string>
+    <string name="editar">Editar</string>
+    <string name="agregar">Agregar</string>
+    <string name="salir">Salir</string>
+    <string name="cerrar_sesion">Cerrar sesión</string>
+    <string name="ver_recibo">Ver recibo</string>
+    <string name="campos_requeridos">Por favor, completa todos los campos</string>
+
     <!-- Login -->
     <string name="login_titulo">Control de Gastos Laborales</string>
     <string name="correo_electronico">Correo Electrónico</string>
     <string name="contrasena">Contraseña</string>
     <string name="iniciar_sesion">Iniciar Sesión</string>
     <string name="crear_cuenta">Crear Cuenta Nueva</string>
-    <string name="error_correo">Ingresa un correo válido</string>
-    <string name="error_contrasena">La contraseña debe tener al menos 4 caracteres</string>
-    <string name="campos_requeridos">Por favor, completa todos los campos</string>
+    <string name="iniciar_sesion_google">Continuar con Google</string>
+    <string name="olvide_contrasena">¿Olvidaste tu contraseña?</string>
     <string name="bienvenido">¡Bienvenido de nuevo!</string>
-    <string name="cuenta_creada">Cuenta creada con éxito: %1$s</string>
+    <string name="error_correo">Ingresa un correo válido</string>
+    <string name="error_contrasena">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="error_credenciales">Credenciales incorrectas. Verifica tu correo y contraseña.</string>
+    <string name="error_iniciar_sesion">No se pudo iniciar sesión: %1$s</string>
+    <string name="restablecer_enviado">Se ha enviado un correo para restablecer tu contraseña.</string>
+    <string name="error_restablecer">No se pudo enviar el correo: %1$s</string>
+    <string name="google_error">Error al iniciar sesión con Google: %1$s</string>
+    <string name="error_firebase">Error de Firebase: %1$s</string>
+    <!-- Coloca aquí el ID de cliente web de OAuth (termina en .apps.googleusercontent.com).
+         Si queda vacío, el botón de Google se oculta. Ver Docs/SEGURIDAD-FIREBASE.md. -->
+    <string name="google_web_client_id" translatable="false">74174685981-3flg9e46b73hf92dbrbcps4c3uqt7suq.apps.googleusercontent.com</string>
+    <string name="error_sin_conexion">Sin conexión. Revisa tu red e intenta de nuevo.</string>
+    <string name="error_demasiados_intentos">Demasiados intentos. Espera unos minutos y vuelve a intentar.</string>
+    <string name="error_email_en_uso">Ya existe una cuenta con este correo electrónico.</string>
+    <string name="error_contrasena_debil">La contraseña es demasiado débil.</string>
+
+    <!-- Verificación de correo -->
+    <string name="verificacion_titulo">Verifica tu correo electrónico</string>
+    <string name="verificacion_mensaje">Enviamos un enlace de verificación a %1$s.\n\nAbre el enlace y vuelve a la app. Si no lo ves, revisa la carpeta de spam.</string>
+    <string name="ya_verifique">Ya verifiqué mi correo</string>
+    <string name="reenviar_correo">Reenviar correo de verificación</string>
+    <string name="usar_otra_cuenta">Usar otra cuenta</string>
+    <string name="correo_no_verificado">Tu correo aún no está verificado. Revisa tu bandeja de entrada y la carpeta de spam.</string>
+    <string name="correo_verificado">¡Correo verificado! Bienvenido.</string>
+    <string name="reenviar_enviado">Te enviamos un nuevo correo de verificación.</string>
+    <string name="error_reenviar">No se pudo enviar el correo: %1$s</string>
+    <string name="cuenta_sin_verificar">Debes verificar tu correo antes de continuar.</string>
+    <string name="error_verificar">No se pudo comprobar la verificación: %1$s</string>
+    <string name="tu_correo">tu correo electrónico</string>
+    <string name="error_enviar_verificacion">La cuenta se creó, pero no se pudo enviar el correo de verificación. Reenvíalo desde la pantalla de verificación.</string>
+
+    <!-- Registro -->
+    <string name="crear_cuenta_titulo">Crear Cuenta</string>
+    <string name="nombre">Nombre</string>
+    <string name="apellido">Apellido</string>
+    <string name="confirmar_contrasena">Confirmar Contraseña</string>
+    <string name="registrar_usuario">Registrarme</string>
+    <string name="volver_al_login">¿Ya tienes cuenta? Inicia sesión</string>
+    <string name="registro_exitoso">Cuenta creada. Revisa tu correo para verificarla.</string>
+    <string name="error_nombre">Escribe tu nombre</string>
+    <string name="error_apellido">Escribe tu apellido</string>
+    <string name="error_contrasena_corta">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="error_contrasenas_no_coinciden">Las contraseñas no coinciden</string>
+    <string name="error_registro">No se pudo crear la cuenta: %1$s</string>
+    <string name="error_guardar_perfil">La cuenta se creó, pero no se pudo guardar el perfil. Intenta de nuevo.</string>
 
     <!-- Pantalla principal -->
+    <string name="bienvenida">¡Bienvenido!</string>
+    <string name="bienvenida_usuario">¡Bienvenido, %1$s!</string>
+    <string name="nombre_usuario_predeterminado">Usuario</string>
     <string name="dinero_disponible">Dinero Disponible</string>
     <string name="presupuesto">Presupuesto</string>
     <string name="total_gastado">Total Gastado</string>
-    <string name="actividades_gastos">Actividades y Gastos</string>
+    <string name="formato_ingreso">+%1$s</string>
+    <string name="actividades_gastos">Gastos registrados</string>
+    <string name="actividades_ingresos">Ingresos registrados</string>
+    <string name="filtro_gastos">Gastos</string>
+    <string name="filtro_ingresos">Ingresos</string>
     <string name="agregar_gasto">Agregar nuevo gasto</string>
+    <string name="agregar_ingreso">Agregar nuevo ingreso</string>
     <string name="sin_gastos">Aún no hay gastos registrados.\nToca el botón + para agregar el primero.</string>
+    <string name="sin_ingresos">Aún no hay ingresos registrados.\nToca el botón + para agregar el primero.</string>
+    <string name="confirmar_cierre_sesion_mensaje">¿Seguro que deseas cerrar sesión?</string>
 
     <!-- Diálogo de gasto -->
-    <string name="nuevo_gasto">Nuevo gasto</string>
+    <string name="titulo_dialogo_gasto">Registrar Nuevo Gasto</string>
+    <string name="titulo_dialogo_editar_gasto">Editar Gasto</string>
     <string name="titulo_gasto">Título</string>
     <string name="monto">Monto</string>
     <string name="categoria">Categoría</string>
     <string name="adjuntar_recibo">Adjuntar foto del recibo</string>
     <string name="sin_recibo">Sin recibo adjunto</string>
-    <string name="recibo_adjunto">Recibo adjunto ✓</string>
-    <string name="recibo_importado">Foto del recibo adjuntada</string>
-    <string name="guardar">Guardar</string>
-    <string name="cancelar">Cancelar</string>
+    <string name="recibo_actual">Recibo actual (adjunta otra foto para reemplazarlo)</string>
+    <string name="recibo_cargado">Recibo cargado correctamente</string>
     <string name="gasto_guardado">Gasto guardado</string>
     <string name="error_titulo">Escribe un título para el gasto</string>
-    <string name="error_monto">Ingresa un monto mayor que cero</string>
+    <string name="error_titulo_largo">El título es demasiado largo</string>
+    <string name="error_monto">Ingresa un monto válido</string>
+    <string name="error_monto_positivo">El monto debe ser mayor que cero</string>
+    <string name="error_monto_excesivo">El monto es demasiado grande</string>
     <string name="error_categoria">Selecciona una categoría</string>
 
-    <!-- Eliminar -->
-    <string name="eliminar">Eliminar</string>
-    <string name="eliminar_gasto">Eliminar gasto</string>
-    <string name="eliminar_gasto_mensaje">¿Deseas eliminar "%1$s"?</string>
-    <string name="gasto_eliminado">Gasto eliminado</string>
+    <!-- Diálogo de ingreso -->
+    <string name="titulo_dialogo_ingreso">Registrar Nuevo Ingreso</string>
+    <string name="titulo_dialogo_editar_ingreso">Editar Ingreso</string>
+    <string name="concepto_ingreso">Concepto (Ej. Pago Quincena)</string>
+    <string name="monto_ingreso">Monto Recibido</string>
+    <string name="categoria_ingreso">Categoría de Ingreso</string>
+    <string name="error_concepto">Escribe un concepto para el ingreso</string>
 
-    <string name="recibo">Recibo</string>
+    <!-- Mensajes de datos -->
+    <string name="ingreso_guardado">Ingreso agregado al presupuesto</string>
+    <string name="gasto_actualizado">Gasto actualizado</string>
+    <string name="ingreso_actualizado">Ingreso actualizado</string>
+    <string name="gasto_eliminado">Gasto eliminado</string>
+    <string name="ingreso_eliminado">Ingreso eliminado</string>
+    <string name="error_guardar_gasto">No se pudo guardar el gasto</string>
+    <string name="error_guardar_ingreso">No se pudo guardar el ingreso</string>
+    <string name="error_actualizar_gasto">No se pudo actualizar el gasto</string>
+    <string name="error_actualizar_ingreso">No se pudo actualizar el ingreso</string>
+    <string name="error_eliminar_gasto">No se pudo eliminar el gasto</string>
+    <string name="error_eliminar_ingreso">No se pudo eliminar el ingreso</string>
+    <string name="error_cargar_datos">No se pudieron cargar los datos. Revisa tu conexión.</string>
+    <string name="error_abrir_recibo">No se pudo abrir el recibo</string>
+    <string name="recibo_no_disponible">Este recibo no está disponible en este dispositivo</string>
+
+    <!-- Eliminar -->
+    <string name="eliminar_gasto">Eliminar gasto</string>
+    <string name="eliminar_ingreso">Eliminar ingreso</string>
+    <string name="eliminar_movimiento_mensaje">¿Deseas eliminar \"%1$s\"?</string>
 </resources>

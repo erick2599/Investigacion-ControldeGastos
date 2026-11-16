@@ -1,7 +1,1 @@
 /build
-# Firebase configuration (Contiene tus IDs de proyecto)
-app/google-services.json
-# Archivos ejecutables locales de Gradle
-gradlew
-gradlew.bat
-gradle/wrapper/gradle-wrapper.jar

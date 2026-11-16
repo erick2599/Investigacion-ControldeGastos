@@ -1,13 +1,37 @@
+# Gradle y Android
 .gradle/
 build/
+**/build/
 capture/
 .idea/
 *.iml
 local.properties
-.DS_Store
-build-tools/*
-platforms/*
-licenses/*
+
+# SDK de Android copiado dentro del repositorio (no debe versionarse)
+sources/
+build-tools/
+platforms/
+licenses/
+platform-tools/
+emulator/
 .knownPackages
-emulator/*
-platform-tools/*
+
+# Artefactos de compilación
+*.apk
+*.aab
+*.dex
+*.class
+
+# Firmas y secretos
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.local
+
+# Herramientas
+firebase-debug.log
+*-debug.log
+.firebase/
+node_modules/
+.DS_Store

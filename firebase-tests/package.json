@@ -1,0 +1,17 @@
+{
+  "name": "controldegastos-firebase-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pruebas de las reglas de Firestore y Storage con los emuladores de Firebase",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-controldegastos \"vitest run\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.0.0",
+    "firebase-tools": "^15.36.0",
+    "vitest": "^5.1.0"
+  }
+}
